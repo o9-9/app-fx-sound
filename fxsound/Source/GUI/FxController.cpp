@@ -1884,6 +1884,7 @@ void FxController::setThemeMode(FxThemeMode mode)
 
 	FxTheme::setThemeMode(mode);
 	settings_.setInt("theme_mode", static_cast<int>(mode));
+    setLanguage(getLanguage()); // To reload font for the new theme
 	main_window_->sendLookAndFeelChange();
 
 	auto power = FxModel::getModel().getPowerState();
