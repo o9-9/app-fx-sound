@@ -426,6 +426,8 @@ struct sndDevicesHdlType {
 
 	// Module common status flag, set by functions that can't complete their requestion operation
 	int function_status;
+
+	void (*deviceChangeCallback)();
 };
 
 _COM_SMARTPTR_TYPEDEF(IMMDevice, __uuidof(IMMDevice));

@@ -174,9 +174,11 @@ bool FxModel::isPresetNameValid(const String& preset_name)
 
 void FxModel::notifyListeners(Event model_event)
 {
-	auto& listeners = listeners_.getListeners();
-	for (auto i = 0; i < listeners.size(); i++)
-	{
-		listeners.getUnchecked(i)->modelChanged(model_event);
-	}
+	MessageManager::callAsync([this, model_event]() {
+		auto& listeners = listeners_.getListeners();
+		for (auto i = 0; i < listeners.size(); i++)
+		{
+			listeners.getUnchecked(i)->modelChanged(model_event);
+		}
+	});
 }

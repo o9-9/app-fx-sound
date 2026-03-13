@@ -80,7 +80,7 @@ public:
 	bool exit();
 
 	void setPowerState(bool power_state);
-	bool setPreset(int selected_preset);
+	bool setPreset(int selected_preset, bool notify=true);
 	void setOutput(const String output_device_id, bool notify=true);
 	void setOutput(int output, bool notify=true);
     
@@ -213,6 +213,7 @@ private:
 	void timerCallback() override;
 
 	void onSoundDeviceChange(std::vector<SoundDevice> sound_devices) override;
+	void onSoundDeviceChange() override;
 	
     void initOutputs(std::vector<SoundDevice>& sound_devices);
 	void updateOutputs(std::vector<SoundDevice>& sound_devices);

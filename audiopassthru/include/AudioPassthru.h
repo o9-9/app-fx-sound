@@ -55,6 +55,7 @@ class AudioPassthruCallback
 {
 public:
 	virtual void onSoundDeviceChange(std::vector<SoundDevice> sound_devices) = 0;
+	virtual void onSoundDeviceChange() = 0;
 };
 
 class AudioPassthruPrivate;

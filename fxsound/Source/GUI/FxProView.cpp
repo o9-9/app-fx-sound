@@ -112,7 +112,6 @@ void FxProView::paint(Graphics& g)
     auto enable_controls = FxModel::getModel().getPowerState();
 
     preset_list_.setEnabled(enable_controls);
-	endpoint_list_.setEnabled(enable_controls);
     effects_.setEnabled(enable_controls);
     equalizer_.setEnabled(enable_controls);
 	visualizer_.setEnabled(enable_controls);

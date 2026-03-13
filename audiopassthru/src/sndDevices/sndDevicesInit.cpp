@@ -72,6 +72,7 @@ int PT_DECLSPEC sndDevicesInit(PT_HANDLE *hp_sndDevices, CSlout *hp_slout, int i
 	cast_handle->slout_hdl = hp_slout;
 	cast_handle->i_trace_on = i_trace_on;
 	cast_handle->function_status = SND_DEVICES_DEVICE_OPERATION_COMPLETED;
+	cast_handle->deviceChangeCallback = NULL;
 
 	SLOUT_FIRST_LINE(L"sndDevicesInit():: sndDevicesInit() enters");
 

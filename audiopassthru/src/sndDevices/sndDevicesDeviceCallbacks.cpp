@@ -128,6 +128,20 @@ HRESULT STDMETHODCALLTYPE CsndDevicesMMNotificationClient::OnDefaultDeviceChange
 	  cast_handle->stopAudioCaptureAndPlaybackLoop = 1;
   }
 
+  cast_handle->defaultDeviceNum = SND_DEVICES_DEVICE_NOT_PRESENT;
+
+  for (int i = 0; i < cast_handle->totalNumDevices; i++)
+  {
+	  if (wcscmp(cast_handle->pwszID[i], pwstrDeviceId) == 0)
+	  {
+		  cast_handle->defaultDeviceNum = i;
+		  break;
+	  }
+  }
+
+  if (cast_handle->deviceChangeCallback != NULL)
+	  cast_handle->deviceChangeCallback();
+
   return S_OK;
 }
 
@@ -148,6 +162,9 @@ HRESULT STDMETHODCALLTYPE CsndDevicesMMNotificationClient::OnDeviceAdded(LPCWSTR
 	  SLOUT_FIRST_LINE(L"CsndDevicesMMNotificationClient::OnDeviceAdded() setting processing thread kill flag");
 	  cast_handle->stopAudioCaptureAndPlaybackLoop = 1;
   }
+
+  if (cast_handle->deviceChangeCallback != NULL)
+	  cast_handle->deviceChangeCallback();
 
   return S_OK;
 };
@@ -170,6 +187,9 @@ HRESULT STDMETHODCALLTYPE CsndDevicesMMNotificationClient::OnDeviceRemoved(LPCWS
 
 	  cast_handle->stopAudioCaptureAndPlaybackLoop = 1;
   }
+
+  if (cast_handle->deviceChangeCallback != NULL)
+	  cast_handle->deviceChangeCallback();
 
   return S_OK;
 }
@@ -225,6 +245,9 @@ HRESULT STDMETHODCALLTYPE CsndDevicesMMNotificationClient::OnDeviceStateChanged(
 	  SLOUT_FIRST_LINE(L"CsndDevicesMMNotificationClient::OnDeviceStateChanged() setting processing thread kill flag");
 	  cast_handle->stopAudioCaptureAndPlaybackLoop = 1;
   }
+
+  if (cast_handle->deviceChangeCallback != NULL)
+	  cast_handle->deviceChangeCallback();
 
   return S_OK;
 }

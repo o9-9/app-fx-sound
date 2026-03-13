@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // but without doing this I was getting access violiation excpeiotn in MMDevApi.dll so 
 // there is some truth to it.
 sndDevicesHdlType AudioPassthruPrivate::s_sndDevices_;
+AudioPassthruCallback* AudioPassthruPrivate::s_callback_ = nullptr;
 
 AudioPassthruPrivate::AudioPassthruPrivate()
 {
@@ -83,6 +84,8 @@ int AudioPassthruPrivate::init()
 	/* Initialize the handle */
 	if (sndDevicesInit(this->hp_sndDevices_, NULL, SND_DEVICES_INIT_FOR_PROCESSING, debug_, &status_flag) != OKAY)
 		return(NOT_OKAY);
+
+	s_sndDevices_.deviceChangeCallback = onDeviceChange;
 
 	if (status_flag != SND_DEVICES_DEVICE_OPERATION_COMPLETED)
 	{
@@ -217,6 +220,13 @@ int AudioPassthruPrivate::sndDeviceHandleToSoundDevices(bool active_devices)
 	return(OKAY);
 }
 
+void AudioPassthruPrivate::onDeviceChange()
+{
+	if (s_callback_ != nullptr)
+	{
+		s_callback_->onSoundDeviceChange();
+	}	
+}
 
 /*
 * FUNCTION: killProcessingThread()
@@ -400,7 +410,7 @@ int AudioPassthruPrivate::processTimer()
 			return(NOT_OKAY);
 		*/
 
-		callback_->onSoundDeviceChange(getSoundDevices());
+		s_callback_->onSoundDeviceChange(getSoundDevices());
 	}
 
 	return(OKAY);
@@ -545,7 +555,7 @@ void AudioPassthruPrivate::mute(bool mute)
 
 void AudioPassthruPrivate::registerCallback(AudioPassthruCallback* callback)
 {
-	callback_ = callback;
+	s_callback_ = callback;
 }
 
 bool AudioPassthruPrivate::isPlaybackDeviceAvailable()
@@ -574,24 +584,10 @@ void AudioPassthruPrivate::restoreDefaultPlaybackDevice()
 int AudioPassthruPrivate::setTargetedRealPlaybackDevice(const std::wstring sound_device_guid)
 {
 	int i_resultFlag;
-	wchar_t wcp_old_targeted_real_playback_guid[PT_MAX_GENERIC_STRLEN];
 	wchar_t wcp_new_targeted_real_playback_guid[PT_MAX_GENERIC_STRLEN];
 	
 	/* Set the guid of the newly selected playback device */
 	swprintf(wcp_new_targeted_real_playback_guid, PT_MAX_GENERIC_STRLEN, L"%s", sound_device_guid.c_str());
-
-	/* Get the guid of the previously targeted playback device to see if it has changed */
-	if (sndDevicesGetID(hp_sndDevices_,
-		SND_DEVICES_TARGETED_REAL_PLAYBACK, wcp_old_targeted_real_playback_guid,
-		&i_resultFlag) != OKAY)
-		return(NOT_OKAY);
-
-	if (i_resultFlag != SND_DEVICES_DEVICE_OPERATION_COMPLETED)
-		swprintf(wcp_old_targeted_real_playback_guid, PT_MAX_GENERIC_STRLEN, L"");
-
-	/* If the targeted playback device has not changed, then do nothing */
-	if (wcscmp(wcp_old_targeted_real_playback_guid, wcp_new_targeted_real_playback_guid) == 0)
-		return(OKAY);
 
 	/* Set the newly targeted playback device as the default.  It will then automatically become the targeted device */
 	if (sndDevicesSetDeviceType(hp_sndDevices_, SND_DEVICES_DEFAULT, wcp_new_targeted_real_playback_guid, &i_resultFlag) != OKAY)
