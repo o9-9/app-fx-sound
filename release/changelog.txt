@@ -1,3 +1,12 @@
+version 1.2.8.0
+----------------
+1. Fixed the bug which caused blank text on theme change
+2. Fixes in giving control to system audio when FxSound is off. Now output device can be changed in FxSound and OS when FxSound is off.
+3. Fixed the device preference list persistence issue and repetition of device names.
+4. Slovenian language support added
+5. Changed Save/Cancel to Yes/No in preset save prompt
+6. Changed +0 to 0 in EQ gain
+
 version 1.2.7.0
 ----------------
 1. Priority can be set to output devices
