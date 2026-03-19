@@ -131,14 +131,8 @@ namespace BinaryData
     extern const char*   dropdown_arrow_hover_svg;
     const int            dropdown_arrow_hover_svgSize = 685;
 
-    extern const char*   FxSound_Logo_White_png;
-    const int            FxSound_Logo_White_pngSize = 6446;
-
     extern const char*   FxSound_Logo_svg;
     const int            FxSound_Logo_svgSize = 7254;
-
-    extern const char*   FxSound_White_Bars_png;
-    const int            FxSound_White_Bars_pngSize = 1223;
 
     extern const char*   FxSound_White_Bars_svg;
     const int            FxSound_White_Bars_svgSize = 589;
@@ -148,12 +142,6 @@ namespace BinaryData
 
     extern const char*   fxsound_large_png;
     const int            fxsound_large_pngSize = 3334;
-
-    extern const char*   logored_png;
-    const int            logored_pngSize = 43192;
-
-    extern const char*   logowhite_png;
-    const int            logowhite_pngSize = 43192;
 
     extern const char*   maximize_svg;
     const int            maximize_svgSize = 826;
@@ -225,7 +213,7 @@ namespace BinaryData
     const int            FxSound_ja_txtSize = 13243;
 
     extern const char*   FxSound_ko_txt;
-    const int            FxSound_ko_txtSize = 12205;
+    const int            FxSound_ko_txtSize = 12196;
 
     extern const char*   FxSound_nl_txt;
     const int            FxSound_nl_txtSize = 11503;
@@ -247,6 +235,9 @@ namespace BinaryData
 
     extern const char*   FxSound_ru_txt;
     const int            FxSound_ru_txtSize = 16021;
+
+    extern const char*   FxSound_sl_txt;
+    const int            FxSound_sl_txtSize = 11334;
 
     extern const char*   FxSound_sv_txt;
     const int            FxSound_sv_txtSize = 11649;
@@ -273,7 +264,7 @@ namespace BinaryData
     const int            FxSound_zhTW_txtSize = 10455;
 
     // Number of elements in the namedResourceList and originalFileNames arrays.
-    const int namedResourceListSize = 88;
+    const int namedResourceListSize = 85;
 
     // Points to the start of a list of resource names.
     extern const char* namedResourceList[];

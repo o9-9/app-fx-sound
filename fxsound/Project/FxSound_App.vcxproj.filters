@@ -3445,6 +3445,9 @@
     <None Include="..\..\Resources\Strings\FxSound.ru.txt">
       <Filter>FxSound\Strings</Filter>
     </None>
+    <None Include="..\..\Resources\Strings\FxSound.sl.txt">
+      <Filter>FxSound\Strings</Filter>
+    </None>
     <None Include="..\..\Resources\Strings\FxSound.sv.txt">
       <Filter>FxSound\Strings</Filter>
     </None>
