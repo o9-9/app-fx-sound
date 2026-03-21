@@ -2,6 +2,9 @@
 FxSound
 Copyright (C) 2025  FxSound LLC
 
+Contributors:
+	www.theremino.com (2025)
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -20,11 +23,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <JuceHeader.h>
 #include "FxModel.h"
+#include "FxTheme.h"
 #include "FxEffects.h"
 #include "../Source/Utils/Settings/Settings.h"
+#include "../Source/Utils/Settings/DeviceConfig.h"
 #include "AudioPassthru.h"
 #include "DfxDsp.h"
 #include <wtsapi32.h>
+
+using namespace FxSound;
 
 class FxMainWindow;
 class FxWindow;
@@ -32,10 +39,15 @@ class FxSystemTrayView;
 
 enum ViewType { Lite = 1, Pro = 2 };
 
-class FxController : public Timer, private AudioPassthruCallback
+class FxController : public Timer, public DeletedAtShutdown, private AudioPassthruCallback
 {
 public:
     static constexpr int NUM_SPECTRUM_BANDS = 10;
+	static constexpr int DEFAULT_NUM_EQ_BANDS = 10;
+	static constexpr float DEFAULT_NORMALIZATION = 0.0f;
+	static constexpr float DEFAULT_BALANCE = 0.0f;
+	static constexpr float DEFAULT_FILTER_Q = 1.0f;
+	static constexpr float DEFAULT_MASTER_GAIN = 0.0f;
 	static constexpr char HK_CMD_ON_OFF[] = "cmd_on_off";
 	static constexpr char HK_CMD_OPEN_CLOSE[] = "cmd_open_close";
 	static constexpr char HK_CMD_NEXT_PRESET[] = "cmd_next_preset";
@@ -44,8 +56,8 @@ public:
 	
 	static FxController& getInstance()
 	{
-		static FxController controller;
-		return controller;
+		static FxController* controller = new FxController();
+		return *controller;
 	}
 	~FxController();
 
@@ -68,10 +80,12 @@ public:
 	bool exit();
 
 	void setPowerState(bool power_state);
-	bool setPreset(int selected_preset);
+	bool setPreset(int selected_preset, bool notify=true);
+	void setOutput(const String output_device_id, bool notify=true);
 	void setOutput(int output, bool notify=true);
     
     bool isPlaybackDeviceAvailable();
+	void checkDeviceChanges();
 
 	void savePreset(const String& preset_name=L"");
 	void renamePreset(const String& new_name);
@@ -83,13 +97,19 @@ public:
 
 	float getEffectValue(FxEffects::EffectType effect);
 	void setEffectValue(FxEffects::EffectType effect, float value);
-	bool isVolumeNormalizationEnbabled() const;
-	void setVolumeNormalizationEnabled(bool enabled);
-	float getVolumeNormalization() const;
-	void setVolumeNormalization(float target_rms);
-	float checkRMSValue(float target_rms);
-    bool isAudioProcessing();
+
 	int getNumEqBands();
+	void setNumEqBands(int num_bands);
+	float getNormalization();
+	void setNormalization(float gain_db);	
+	void setBalance(float gain_db);
+	float getBalance();
+	void setMasterGain(float gain_db);
+	float getMasterGain();
+	void setFilterQ(float q_multiplier);
+	float getFilterQ();
+
+    bool isAudioProcessing();
 	float getEqBandFrequency(int band_num);
     void setEqBandFrequency(int band_num, float freq);
     void getEqBandFrequencyRange(int band_num, float* min_freq, float* max_freq);
@@ -102,10 +122,18 @@ public:
 	bool setHotkey(const String& command, int new_mod, int vk);
 	bool isValidHotkey(int mod, int new_vk);
 
-	std::tuple<String, String> getPreferredOutput();
-	String getPreferredOutputId();
-	String getPreferredOutputName();
-	void setPreferredOutput(String id, String name);
+	juce::Array<DeviceConfig> getDeviceConfigs();
+    void saveDeviceConfigs(const juce::Array<DeviceConfig>& device_configs);
+	bool isOutputDeviceConnected(const String& output_device_name);
+	SoundDevice getPreferredOutput();
+	const String& getOutputName();
+    void setOutputName(const String& output_device_name);
+
+	FxThemeMode getThemeMode();
+	void setThemeMode(FxThemeMode mode);
+
+	bool isAlwaysOnTop();
+	void setAlwaysOnTop(bool always_on_top);
 
 	bool isLaunchOnStartup();
 	void setLaunchOnStartup(bool launch_on_startup);
@@ -121,10 +149,19 @@ public:
     String getLanguageName(String language_code) const;
 	int getMaxUserPresets() const;
 
+	bool getAutoUpdates();
+	void setAutoUpdates(bool enable);
+	void checkUpdates();
+
+	void saveWindowPosition(int x, int y);
+	void getWindowPosition(int& x, int& y);
+
 	void logMessage(const String& message)
 	{
 		file_logger_->logMessage(message);
 	}
+
+	FxSound::Settings& getSettings() { return settings_; }
 
 private:
 	class MessageWindow
@@ -178,12 +215,12 @@ private:
 	void timerCallback() override;
 
 	void onSoundDeviceChange(std::vector<SoundDevice> sound_devices) override;
+	void onSoundDeviceChange() override;
 	
     void initOutputs(std::vector<SoundDevice>& sound_devices);
-	void addPreferredOutput(std::vector<SoundDevice>& sound_devices);
-    void selectOutput();
 	void updateOutputs(std::vector<SoundDevice>& sound_devices);
-	void setSelectedOutput(String id, String name);
+
+	void powerOn(bool on);
 
 	void registerHotkeys();
 	void unregisterHotkeys();
@@ -204,30 +241,23 @@ private:
     String language_;
 	bool dfx_enabled_;
 	bool authenticated_;
-    bool free_plan_;
 	bool output_changed_;
     bool playback_device_available_;
-	String output_device_id_;
-    String output_device_name_;
-    StringArray output_ids_;
-	std::vector<SoundDevice> output_devices_;
+	String output_device_name_;
+	std::vector<SoundDevice> active_output_devices_;
+	bool always_on_top_;
     bool hide_help_tooltips_;
 	bool hide_notifications_;
-	bool volume_normalization_enabled_;
-	float volume_normalization_rms_;
+	bool auto_updates_;
 
 	unsigned long audio_process_time_;
 	int audio_process_on_counter_;
 	int audio_process_off_counter_;
 	bool audio_process_on_;
-    unsigned long audio_processed_per_day_;
-    std::time_t audio_process_start_time_;
+	std::time_t audio_process_start_time_;
 
 	bool minimize_tip_;
-	bool processing_time_over_tip_;
-	bool subscription_validity_tip_;
-    bool survey_tip_;
-    bool subscription_unverified_tip_;
+	bool survey_tip_;
 	int max_user_presets_;
 
 	DWORD session_id_;

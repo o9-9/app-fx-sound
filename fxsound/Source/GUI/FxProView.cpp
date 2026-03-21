@@ -2,6 +2,9 @@
 FxSound
 Copyright (C) 2025  FxSound LLC
 
+Contributors:
+	www.theremino.com (2025)
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -19,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <JuceHeader.h>
 #include "FxProView.h"
 #include "FxController.h"
+#include "FxTheme.h"
 
 //==============================================================================
 FxProView::FxProView() : tool_tip_(this)
@@ -54,6 +58,8 @@ void FxProView::update()
 	effects_.update();
 	equalizer_.update();
 
+	visualizer_.calcGradient();
+
     if (FxController::getInstance().isAudioProcessing())
     {
         visualizer_.reset();
@@ -61,6 +67,9 @@ void FxProView::update()
 
 	visualizer_.setVisible(true);
 	setSize(WIDTH, HEIGHT + 20);
+	// -------------------------- Values always visible since version 2.0 (otherwise they do not appear on touch screens)
+	equalizer_.showValues(true);
+	effects_.showValues(true);
 }
 
 void FxProView::resized()
@@ -97,10 +106,10 @@ void FxProView::paint(Graphics& g)
 	g.setFillType(FillType(theme.getCurrentColourScheme().getUIColour(LookAndFeel_V4::ColourScheme::windowBackground)));
 	g.fillAll();
 
-	g.setFillType(FillType(Colour(0x0).withAlpha(0.2f)));
-	g.fillRoundedRectangle(20, 16, 920, 330+visualizer_offset, 8);
+	g.setFillType(FillType(Colour(FXCOLOR(PanelBackground)).withAlpha(0.2f)));
+	g.fillRoundedRectangle(20, 16, 1000, 330+visualizer_offset, 8);
 
-    auto enable_controls = FxModel::getModel().getPowerState() && !FxModel::getModel().isMonoOutputSelected();
+    auto enable_controls = FxModel::getModel().getPowerState();
 
     preset_list_.setEnabled(enable_controls);
     effects_.setEnabled(enable_controls);
@@ -126,15 +135,9 @@ void FxProView::modelChanged(FxModel::Event model_event)
 void FxProView::mouseEnter(const MouseEvent& mouse_event)
 {
 	FxView::mouseEnter(mouse_event);
-
-	equalizer_.showValues(equalizer_.isMouseOver(true));
-	effects_.showValues(effects_.isMouseOver(true));
 }
 
 void FxProView::mouseExit(const MouseEvent& mouse_event)
 {
 	FxView::mouseEnter(mouse_event);
-
-	equalizer_.showValues(equalizer_.isMouseOver(true));
-	effects_.showValues(effects_.isMouseOver(true));
 }

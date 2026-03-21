@@ -21,87 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "../Utils/SysInfo/SysInfo.h"
 
 //==============================================================================
-FxVolumeSlider::FxVolumeSlider()
-{
-	setMouseCursor(MouseCursor::PointingHandCursor);
-
-	auto& theme = dynamic_cast<FxTheme&>(getLookAndFeel());
-
-	value_label_.setFont(theme.getNormalFont().withHeight(12.0f));
-	value_label_.setJustificationType(Justification::centredLeft);
-	addChildComponent(value_label_);
-
-	setWantsKeyboardFocus(true);
-}
-
-void FxVolumeSlider::setVolumeValue(float value)
-{
-	int display_value = int(value / 0.125f);
-	auto text = String::formatted("%d", display_value);
-	value_label_.setText(text, NotificationType::dontSendNotification);
-
-	auto pos = getPositionOfValue(value);
-	auto x = pos + FxTheme::SLIDER_THUMB_RADIUS + 1;
-	value_label_.setBounds(value_label_.getBounds().withX(x));
-}
-
-void FxVolumeSlider::showValue(bool show)
-{
-	value_label_.setVisible(show && isEnabled());
-}
-
-void FxVolumeSlider::resized()
-{
-	Slider::resized();
-
-	value_label_.setBounds(value_label_.getX(), (getHeight() - LABEL_HEIGHT) / 2, FxTheme::SLIDER_THUMB_RADIUS * 3, LABEL_HEIGHT);
-}
-
-void FxVolumeSlider::valueChanged()
-{
-	auto value = getValue();
-
-	auto& controller = FxController::getInstance();
-
-	if (value != controller.getVolumeNormalization())
-	{
-		setVolumeValue(value);
-
-		controller.setVolumeNormalization((float)value);
-	}
-}
-
-void FxVolumeSlider::enablementChanged()
-{
-	if (isEnabled())
-	{
-		setMouseCursor(MouseCursor::PointingHandCursor);
-	}
-	else
-	{
-		setMouseCursor(MouseCursor::NormalCursor);
-	}
-}
-
-bool FxVolumeSlider::keyPressed(const KeyPress& key)
-{
-	if (isEnabled())
-	{
-		if (key.isKeyCode(KeyPress::upKey))
-		{
-			setValue(getValue() + getInterval());
-			return true;
-		}
-		else if (key.isKeyCode(KeyPress::downKey))
-		{
-			setValue(getValue() - getInterval());
-			return true;
-		}
-	}
-
-	return false;
-}
-
 FxSettingsDialog::FxSettingsDialog() : FxWindow("Settings"), tooltip_window_(this)
 {
 	setContent(&settings_content_);
@@ -121,7 +40,7 @@ void FxSettingsDialog::paint(Graphics& g)
 {
 	FxWindow::paint(g);
 
-	g.setColour(Colour(0x2b2b2b).withAlpha(1.0f));
+	g.setColour(Colour(FXCOLOR(Outline)).withAlpha(1.0f));
 	g.drawLine((float)SEPARATOR_X, (float)title_bar_.getBottom(), (float)SEPARATOR_X, (float)getLocalBounds().getBottom());
 }
 
@@ -131,11 +50,11 @@ void FxSettingsDialog::SettingsButton::paint(Graphics& g)
 
 	if (getToggleState())
 	{
-		g.setColour(Colour(0x414141).withAlpha(1.0f));
+		g.setColour(Colour(FXCOLOR(MenuHighlightBackground)).withAlpha(1.0f));
 	}
 	else
 	{
-		g.setColour(Colour(0x383838).withAlpha(1.0f));
+		g.setColour(Colour(FXCOLOR(MenuBackground)).withAlpha(1.0f));
 	}
 	auto rect = juce::Rectangle<float>(0, 0, (float)bounds.getHeight(), (float)bounds.getHeight());
 	g.fillRoundedRectangle(rect, (float)bounds.getHeight()/4);
@@ -144,11 +63,11 @@ void FxSettingsDialog::SettingsButton::paint(Graphics& g)
 
 	if (getToggleState())
 	{
-		g.setColour(Colour(0xffffffff));
+		g.setColour(Colour(FXCOLOR(HighlightedText)).withAlpha(1.0f));
 	}
 	else
 	{
-		g.setColour(Colour(0xB1B1B1).withAlpha(1.0f));
+		g.setColour(Colour(FXCOLOR(DefaultText)).withAlpha(1.0f));
 	}
 	auto w = bounds.getWidth() - bounds.getHeight() + 5;
 
@@ -170,7 +89,6 @@ bool FxSettingsDialog::keyPressed(const KeyPress& key)
 }
 
 FxSettingsDialog::SettingsComponent::SettingsComponent()
-    : donate_button_("Donate")
 {
 	audio_button_ = std::make_unique<SettingsButton>("Audio");
 	audio_button_->setToggleState(true, NotificationType::dontSendNotification);
@@ -185,18 +103,11 @@ FxSettingsDialog::SettingsComponent::SettingsComponent()
 	help_button_ = std::make_unique<SettingsButton>("Help");
 	help_button_->setToggleState(false, NotificationType::dontSendNotification);
 	help_button_->setImage(Drawable::createFromImageData(BinaryData::question_svg, BinaryData::question_svgSize).get());
-	help_button_->addListener(this);
-
-    donate_button_.setMouseCursor(MouseCursor::PointingHandCursor);
-    donate_button_.onClick = [this]() {
-        URL url("https://www.paypal.com/donate/?hosted_button_id=JVNQGYXCQ2GPG");
-        url.launchInDefaultBrowser();
-    };
+	help_button_->addListener(this);    
 
 	addAndMakeVisible(audio_button_.get());
 	addAndMakeVisible(general_button_.get());
 	addAndMakeVisible(help_button_.get());
-    addAndMakeVisible(&donate_button_);
 
 	addAndMakeVisible(audio_settings_pane_);
 	addChildComponent(general_settings_pane_);
@@ -210,18 +121,12 @@ void FxSettingsDialog::SettingsComponent::resized()
 	audio_button_->setBounds(BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT);
 	general_button_->setBounds(BUTTON_X, audio_button_->getBottom() + 20, BUTTON_WIDTH, BUTTON_HEIGHT);
 	help_button_->setBounds(BUTTON_X, general_button_->getBottom() + 20, BUTTON_WIDTH, BUTTON_HEIGHT);
-    donate_button_.setBounds(BUTTON_X, help_button_->getBottom() + 20, DONATE_BUTTON_WIDTH, DONATE_BUTTON_HEIGHT);
 
 	juce::Rectangle<int> pane_rect(SEPARATOR_X + 1, 1, getWidth() - SEPARATOR_X + 1, HEIGHT - 1);
 	
 	audio_settings_pane_.setBounds(pane_rect);
 	general_settings_pane_.setBounds(pane_rect);
 	help_settings_pane_.setBounds(pane_rect);
-}
-
-void  FxSettingsDialog::SettingsComponent::paint(Graphics&)
-{
-    donate_button_.setButtonText(TRANS("Donate"));
 }
 
 void  FxSettingsDialog::SettingsComponent::buttonClicked(Button* button)
@@ -279,83 +184,150 @@ void FxSettingsDialog::SettingsPane::paint(Graphics&)
 }
 
 FxSettingsDialog::AudioSettingsPane::AudioSettingsPane() :
-	SettingsPane("Audio"),
-	volume_normalizer_toggle_(TRANS("Normalize Volume"))
+	SettingsPane("Audio"), 
+	master_gain_slider_("%0.0f dB", 0.0f), 
+	normalizer_slider_("%0.0f dB", 0.0f), 
+	filter_q_slider_("%.1fx", 1.0f), balance_slider_(0.0f),
+	restore_defaults_button_(TRANS("Restore Defaults")),
+	reset_presets_button_(TRANS("Reset presets to factory defaults"))
 {
 	FxModel::getModel().addListener(this);
 
 	setFocusContainer(true);
 
-	endpoint_title_.setColour(Label::ColourIds::textColourId, getLookAndFeel().findColour(TextButton::textColourOnId));
-	endpoint_title_.setJustificationType(Justification::centredLeft);
+	output_preference_title_.setColour(Label::ColourIds::textColourId, getLookAndFeel().findColour(TextButton::textColourOnId));
+	output_preference_title_.setJustificationType(Justification::centredLeft);
 
-	preferred_endpoint_.setMouseCursor(MouseCursor::PointingHandCursor);
-	preferred_endpoint_.setWantsKeyboardFocus(true);
-	preferred_endpoint_.setEnabled(true);
-	preferred_endpoint_.onChange = [this]() {
-			auto endpoints = FxModel::getModel().getOutputDevices();
-			auto id = preferred_endpoint_.getSelectedId();
-			if (id > 0 && id <= endpoints.size())
-			{
-				auto pref_device_id = endpoints[id - 1].pwszID;
-				auto pref_device_name = endpoints[id - 1].deviceFriendlyName;
-				FxController::getInstance().setPreferredOutput(pref_device_id.c_str(), pref_device_name.c_str());
-				FxController::getInstance().setOutput(id - 1);
-			}
-			else
-			{
-				if (id == preferred_endpoint_.getNumItems() - 1)
-				{
-					FxController::getInstance().setPreferredOutput("", "Auto");
-				}
-				else
-				{
-					FxController::getInstance().setPreferredOutput("", "None");
-				}
-			}
-		};
+	equalizer_title_.setColour(Label::ColourIds::textColourId, getLookAndFeel().findColour(TextButton::textColourOnId));
+	equalizer_title_.setJustificationType(Justification::centredLeft);
 
-	volume_normalizer_toggle_.setMouseCursor(MouseCursor::PointingHandCursor);
-	volume_normalizer_toggle_.setColour(ToggleButton::ColourIds::tickColourId, getLookAndFeel().findColour(TextButton::textColourOnId));
-	volume_normalizer_toggle_.setColour(ToggleButton::ColourIds::textColourId, getLookAndFeel().findColour(TextButton::textColourOnId));
-	volume_normalizer_toggle_.setWantsKeyboardFocus(true);
+	master_gain_title_.setColour(Label::ColourIds::textColourId, getLookAndFeel().findColour(TextButton::textColourOnId));
+	master_gain_title_.setJustificationType(Justification::centredLeft);
+
+	normalizer_title_.setColour(Label::ColourIds::textColourId, getLookAndFeel().findColour(TextButton::textColourOnId));
+	normalizer_title_.setJustificationType(Justification::centredLeft);
+
+	filter_q_title_.setColour(Label::ColourIds::textColourId, getLookAndFeel().findColour(TextButton::textColourOnId));
+	filter_q_title_.setJustificationType(Justification::centredLeft);
+
+	balance_title_.setColour(Label::ColourIds::textColourId, getLookAndFeel().findColour(TextButton::textColourOnId));
+	balance_title_.setJustificationType(Justification::centredLeft);
+
+	left_label_.setJustificationType(Justification::centredLeft);
+	right_label_.setJustificationType(Justification::centredRight);
+
+	output_preference_.setMouseCursor(MouseCursor::PointingHandCursor);
+	output_preference_.setWantsKeyboardFocus(true);
+	output_preference_.setEnabled(true);
 
 	auto& controller = FxController::getInstance();
-	
-	bool enabled = controller.isVolumeNormalizationEnbabled();
-	volume_normalizer_toggle_.setToggleState(enabled, NotificationType::dontSendNotification);
-	volume_normalizer_toggle_.onClick = [this]() {
-		if (volume_normalizer_toggle_.getToggleState()) {
-			FxController::getInstance().setVolumeNormalizationEnabled(true);
-			volume_.setEnabled(true);
-		}
-		else {
-			FxController::getInstance().setVolumeNormalizationEnabled(false);
-			volume_.setEnabled(false);
-		}
-	};
 
-	auto volume_normalization_rms = controller.getVolumeNormalization();
-	volume_.setSliderStyle(Slider::LinearHorizontal);
-	volume_.setRange(0.125, 0.5, 0.125);
-	volume_.setValue(volume_normalization_rms);
-	volume_.setVolumeValue(volume_normalization_rms);
-	volume_.setTextBoxStyle(Slider::NoTextBox, false, 0, 0);
-	volume_.setEnabled(enabled);
-	addAndMakeVisible(&volume_);
+	equalizer_.setMouseCursor(MouseCursor::PointingHandCursor);
+	equalizer_.setWantsKeyboardFocus(true);
+	equalizer_.setEnabled(true);
+	equalizer_.onChange = [this]() {
+		auto id = equalizer_.getSelectedId();
+		
+		auto num_eq_bands = 10;		
+		for (auto bands : equalizer_bands_)
+		{
+			if (bands == id)
+			{
+				num_eq_bands = bands;
+				break;
+			}
+		}
+
+		FxController::getInstance().setNumEqBands(num_eq_bands);
+	};	
+
+	equalizer_.clear(NotificationType::dontSendNotification);
+	for (auto bands : equalizer_bands_)
+	{
+		equalizer_.addItem(String(bands) + TRANS(" Bands"), bands);
+	}
+	selectEqualizerBands();
+
+	master_gain_slider_.setSliderStyle(Slider::LinearHorizontal);
+	master_gain_slider_.setRange(-20, 20, 2);
+	master_gain_slider_.setValue(controller.getMasterGain());
+	master_gain_slider_.setTextBoxStyle(Slider::NoTextBox, false, 0, 0);
+	master_gain_slider_.onValueChange= [this]() {
+		auto value = master_gain_slider_.getValue();
+		auto& controller = FxController::getInstance();
+
+		if (controller.getMasterGain() != value)
+			controller.setMasterGain((float)value);
+
+		};
+
+	normalizer_slider_.setSliderStyle(Slider::LinearHorizontal);
+	normalizer_slider_.setRange(-20, 0, 2);
+	normalizer_slider_.setValue(controller.getNormalization());
+	normalizer_slider_.setTextBoxStyle(Slider::NoTextBox, false, 0, 0);
+	normalizer_slider_.onValueChange = [this]() {
+		auto value = normalizer_slider_.getValue();
+		auto& controller = FxController::getInstance();
+
+		if (controller.getNormalization() != value)
+			controller.setNormalization((float)value);
+		};
 	
-	addAndMakeVisible(&endpoint_title_);
-	addAndMakeVisible(&preferred_endpoint_);
-	addAndMakeVisible(&volume_normalizer_toggle_);
+	filter_q_slider_.setSliderStyle(Slider::LinearHorizontal);
+	filter_q_slider_.setRange(1, 3, 0.5);
+	filter_q_slider_.setValue(controller.getFilterQ());
+	filter_q_slider_.setTextBoxStyle(Slider::NoTextBox, false, 0, 0);
+	filter_q_slider_.onValueChange = [this]() {
+		auto value = filter_q_slider_.getValue();
+		auto& controller = FxController::getInstance();
+
+		if (controller.getFilterQ() != value)
+			controller.setFilterQ((float)value);
+		};
+
+	restore_defaults_button_.setSize(RESTORE_DEFAULTS_BUTTON_WIDTH, BUTTON_HEIGHT);
+	restore_defaults_button_.setMouseCursor(MouseCursor::PointingHandCursor);
+	restore_defaults_button_.onClick = [this]() {		
+		restoreDefaults();		
+		};
+
+	reset_presets_button_.setSize(RESET_PRESETS_BUTTON_WIDTH, BUTTON_HEIGHT);
+	reset_presets_button_.setMouseCursor(MouseCursor::PointingHandCursor);
+	reset_presets_button_.setEnabled(FxModel::getModel().getUserPresetCount() > 0);
+	reset_presets_button_.onClick = [this]() {
+		auto& controller = FxController::getInstance();
+
+		controller.resetPresets();
+		reset_presets_button_.setEnabled(false);
+		};
 
 	setText();
-
 	updateEndpointList();
+
+	addAndMakeVisible(&output_preference_title_);
+	addAndMakeVisible(&output_preference_);
+	addAndMakeVisible(&equalizer_title_);
+	addAndMakeVisible(&equalizer_);
+	addAndMakeVisible(&master_gain_title_);
+	addAndMakeVisible(&master_gain_slider_);
+	addAndMakeVisible(&normalizer_title_);
+	addAndMakeVisible(&normalizer_slider_);
+	addAndMakeVisible(&filter_q_title_);
+	addAndMakeVisible(&filter_q_slider_);
+	addAndMakeVisible(&balance_title_);
+	addAndMakeVisible(&balance_slider_);
+	addAndMakeVisible(&left_label_);
+	addAndMakeVisible(&right_label_);
+	addAndMakeVisible(&restore_defaults_button_);
+	addAndMakeVisible(&reset_presets_button_);
 }
 
 FxSettingsDialog::AudioSettingsPane::~AudioSettingsPane()
 {
-	preferred_endpoint_.onChange = nullptr;
+	equalizer_.onChange = nullptr;
+	master_gain_slider_.onValueChange = nullptr;
+	normalizer_slider_.onValueChange = nullptr;
+	filter_q_slider_.onValueChange = nullptr;
 
 	FxModel::getModel().removeListener(this);
 }
@@ -365,25 +337,71 @@ void FxSettingsDialog::AudioSettingsPane::resized()
 	auto bounds = getLocalBounds().withLeft(X_MARGIN).withTop(Y_MARGIN).withHeight(TITLE_HEIGHT);
 	title_.setBounds(bounds);
 
-	endpoint_title_.setBounds(X_MARGIN, ENDPOINT_Y, ENDPOINT_LABEL_WIDTH, ENDPOINT_LIST_HEIGHT);
-	auto width = getWidth() - ((X_MARGIN + 5) * 2) - ENDPOINT_LABEL_WIDTH;
-	preferred_endpoint_.setBounds(ENDPOINT_LABEL_WIDTH + X_MARGIN + 15, ENDPOINT_Y, width, ENDPOINT_LIST_HEIGHT);
+	output_preference_title_.setBounds(X_MARGIN, ENDPOINT_Y, LABEL_WIDTH, LABEL_HEIGHT);
+	int y = output_preference_title_.getBottom() + 8;
+	auto width = getWidth() - ((X_MARGIN + 5) * 2);
+	output_preference_.setBounds(X_MARGIN, y, width, OUTPUT_PREFERENCE_HEIGHT);
 
-	int y = preferred_endpoint_.getBottom() + 20;
+	y = output_preference_.getBottom() + 30;
+	equalizer_title_.setBounds(X_MARGIN, y, LABEL_WIDTH, COMBOBOX_HEIGHT);
+	width = getWidth() - ((X_MARGIN + 5) * 2) - LABEL_WIDTH - GROUP_MARGIN;
+	equalizer_.setBounds(LABEL_WIDTH + X_MARGIN + 10, y, width, COMBOBOX_HEIGHT);
 
-	volume_normalizer_toggle_.setBounds(X_MARGIN, y, getWidth() - X_MARGIN, TOGGLE_BUTTON_HEIGHT);
-	y = volume_normalizer_toggle_.getBottom() + 10;
+	y = equalizer_.getBottom() + 20;
 
-	volume_.setBounds(X_MARGIN, y, SLIDER_WIDTH, SLIDER_HEIGHT);
+	master_gain_title_.setBounds(X_MARGIN, y, LABEL_WIDTH, SLIDER_HEIGHT);
+	master_gain_slider_.setBounds(LABEL_WIDTH + X_MARGIN + 10, y, width, SLIDER_HEIGHT);
+
+	y = master_gain_slider_.getBottom() + 20;
+
+	normalizer_title_.setBounds(X_MARGIN, y, LABEL_WIDTH, SLIDER_HEIGHT);
+	normalizer_slider_.setBounds(LABEL_WIDTH + X_MARGIN + 10, y, width, SLIDER_HEIGHT);
+
+	y = normalizer_slider_.getBottom() + 20;
+
+	filter_q_title_.setBounds(X_MARGIN, y, LABEL_WIDTH, SLIDER_HEIGHT);
+	filter_q_slider_.setBounds(LABEL_WIDTH + X_MARGIN + 10, y, width, SLIDER_HEIGHT);
+
+	y = filter_q_slider_.getBottom() + 20;
+
+	balance_title_.setBounds(X_MARGIN, y, LABEL_WIDTH, SLIDER_HEIGHT);
+	balance_slider_.setBounds(LABEL_WIDTH + X_MARGIN + 15, y, width, SLIDER_HEIGHT);
+
+	y = balance_slider_.getBottom();
+
+	left_label_.setBounds(LABEL_WIDTH + X_MARGIN + 15, y, width/2 - 10, LABEL_HEIGHT);
+	right_label_.setBounds(left_label_.getRight() + 10, y, width/2 - (FxTheme::SLIDER_THUMB_RADIUS * 4), LABEL_HEIGHT);
+
+	y = left_label_.getBottom() + 20;
+	restore_defaults_button_.setBounds(X_MARGIN, y, RESTORE_DEFAULTS_BUTTON_WIDTH, BUTTON_HEIGHT);
+
+	auto group_x = equalizer_title_.getX() - GROUP_MARGIN;
+	auto group_y = equalizer_.getY() - GROUP_MARGIN;
+	auto group_width = equalizer_.getRight() - group_x + GROUP_MARGIN;
+	auto group_height = restore_defaults_button_.getBottom() - group_y + GROUP_MARGIN;
+	audio_settings_bounds_ = juce::Rectangle<float>(group_x, group_y, group_width, group_height);
+
+	group_x = output_preference_title_.getX() - GROUP_MARGIN;
+	group_y = output_preference_title_.getY() - GROUP_MARGIN;
+	group_width = output_preference_.getRight() - group_x + GROUP_MARGIN;
+	group_height = output_preference_.getBottom() - group_y + GROUP_MARGIN;
+	output_preference_bounds_ = juce::Rectangle<float>(group_x, group_y, group_width, group_height);
+
+	y = restore_defaults_button_.getBottom();
+	resizeResetButton(X_MARGIN, y + 30);
 }
 
 void FxSettingsDialog::AudioSettingsPane::paint(Graphics& g)
 {
 	g.fillAll(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));
 
+	g.setFillType(FillType(Colour(FXCOLOR(DefaultFill)).withAlpha(0.2f)));
+	g.fillRoundedRectangle(audio_settings_bounds_, 8);
+	g.fillRoundedRectangle(output_preference_bounds_, 8);
+
 	setText();
 
-	updateEndpointText();
+	updateEqualizerBandsText();
 
 	SettingsPane::paint(g);
 }
@@ -392,11 +410,102 @@ void FxSettingsDialog::AudioSettingsPane::setText()
 {
 	auto& theme = dynamic_cast<FxTheme&>(LookAndFeel::getDefaultLookAndFeel());
 
-	endpoint_title_.setText(TRANS("Preferred output:"), NotificationType::dontSendNotification);
-	endpoint_title_.setFont(theme.getNormalFont());
-	preferred_endpoint_.setTextWhenNothingSelected(TRANS("Select preferred output"));
+	output_preference_title_.setFont(theme.getNormalFont());
+	output_preference_title_.setText(TRANS("Output Device Preference"), NotificationType::dontSendNotification);	
 
-	volume_normalizer_toggle_.setButtonText(TRANS("Normalize Volume"));
+	equalizer_title_.setFont(theme.getNormalFont());
+	equalizer_title_.setText(TRANS("Equalizer:"), NotificationType::dontSendNotification);
+
+	master_gain_title_.setFont(theme.getNormalFont());
+	master_gain_title_.setText(TRANS("Master Gain:"), NotificationType::dontSendNotification);
+	normalizer_title_.setFont(theme.getNormalFont());
+	normalizer_title_.setText(TRANS("Normalization:"), NotificationType::dontSendNotification);
+	filter_q_title_.setFont(theme.getNormalFont());
+	filter_q_title_.setText(TRANS("Filter Q:"), NotificationType::dontSendNotification);	
+	balance_title_.setFont(theme.getNormalFont());
+	balance_title_.setText(TRANS("Balance:"), NotificationType::dontSendNotification);
+
+	left_label_.setFont(theme.getNormalFont().withHeight(12.0f));
+	left_label_.setText(TRANS("Left"), NotificationType::dontSendNotification);
+
+	right_label_.setFont(theme.getNormalFont().withHeight(12.0f));
+	right_label_.setText(TRANS("Right"), NotificationType::dontSendNotification);
+
+	restore_defaults_button_.setButtonText(TRANS("Restore Defaults"));
+	int button_width = min(restore_defaults_button_.getBestWidthForHeight(BUTTON_HEIGHT), MAX_BUTTON_WIDTH);
+	if (button_width < RESET_PRESETS_BUTTON_WIDTH)
+	{
+		button_width = RESET_PRESETS_BUTTON_WIDTH;
+	}
+	restore_defaults_button_.setBounds(restore_defaults_button_.getX(), restore_defaults_button_.getY(), button_width, BUTTON_HEIGHT);
+
+	reset_presets_button_.setButtonText(TRANS("Reset presets to factory defaults"));
+	resizeResetButton(reset_presets_button_.getX(), reset_presets_button_.getY());
+}
+
+void FxSettingsDialog::AudioSettingsPane::resizeResetButton(int x, int y)
+{
+	String buttonText = reset_presets_button_.getButtonText();
+
+	int index = 0;
+	int lineCount = 1;
+	do {
+		index = buttonText.indexOfChar(index, L'\n');
+		if (index >= 0)
+		{
+			index++;
+			lineCount++;
+		}
+		else
+		{
+			break;
+		}
+	} while (lineCount <= 3); // Resize the button height for upto 3 lines of text
+
+	int buttonWidth = min(reset_presets_button_.getBestWidthForHeight(BUTTON_HEIGHT * lineCount), MAX_BUTTON_WIDTH);
+	if (buttonWidth < RESET_PRESETS_BUTTON_WIDTH)
+	{
+		buttonWidth = RESET_PRESETS_BUTTON_WIDTH;
+	}
+
+	reset_presets_button_.setBounds(x, y, buttonWidth, BUTTON_HEIGHT * lineCount);
+}
+
+void FxSettingsDialog::AudioSettingsPane::selectEqualizerBands()
+{
+	auto& controller = FxController::getInstance();
+	auto num_eq_bands = controller.getNumEqBands();
+
+	switch (num_eq_bands)
+	{
+	case 5:
+	case 10:
+	case 15:
+	case 20:
+	case 31:
+		equalizer_.setSelectedId(num_eq_bands, NotificationType::dontSendNotification);
+		break;
+
+	default:
+		equalizer_.setSelectedId(FxController::DEFAULT_NUM_EQ_BANDS, NotificationType::dontSendNotification);
+	}
+}
+
+void FxSettingsDialog::AudioSettingsPane::restoreDefaults()
+{
+	auto& controller = FxController::getInstance();
+
+	controller.setNumEqBands(FxController::DEFAULT_NUM_EQ_BANDS);
+	controller.setNormalization(FxController::DEFAULT_NORMALIZATION);
+	controller.setBalance(FxController::DEFAULT_BALANCE);
+	controller.setFilterQ(FxController::DEFAULT_FILTER_Q);
+	controller.setMasterGain(FxController::DEFAULT_MASTER_GAIN);
+
+	equalizer_.setSelectedId(controller.getNumEqBands(), NotificationType::dontSendNotification);
+	master_gain_slider_.setValue(controller.getMasterGain());
+	normalizer_slider_.setValue(controller.getNormalization());
+	filter_q_slider_.setValue(controller.getFilterQ());
+	balance_slider_.setValue(controller.getBalance());
 }
 
 void FxSettingsDialog::AudioSettingsPane::modelChanged(FxModel::Event model_event)
@@ -410,65 +519,42 @@ void FxSettingsDialog::AudioSettingsPane::modelChanged(FxModel::Event model_even
 void FxSettingsDialog::AudioSettingsPane::updateEndpointList()
 {
 	auto& controller = FxController::getInstance();
-	auto endpoints = FxModel::getModel().getOutputDevices();
-	auto i = 1;
+	auto device_configs = controller.getDeviceConfigs();
+
 	auto pref_device_index = 0;
-
-	preferred_endpoint_.clear(NotificationType::dontSendNotification);
-	for (auto endpoint : endpoints)
-	{
-		preferred_endpoint_.addItem(endpoint.deviceFriendlyName.c_str(), i);
-		if (endpoint.deviceNumChannel == 1)
-		{
-			preferred_endpoint_.setItemEnabled(i, false);
-		}
-		if (endpoint.pwszID == controller.getPreferredOutputId().toWideCharPointer())
-		{
-			pref_device_index = i;
-		}
-		i++;
-	}
-	preferred_endpoint_.addItem(TRANS("Newly connected output device"), i);
-	auto auto_index = i++;
-	preferred_endpoint_.addItem(TRANS("None"), i);
-	auto none_index = i;
-
-	if (controller.getPreferredOutputName().equalsIgnoreCase(L"Auto"))
-	{
-		pref_device_index = auto_index;
-	}
-	else if (controller.getPreferredOutputName().equalsIgnoreCase(L"None"))
-	{
-		pref_device_index = none_index;
-	}
-
-	preferred_endpoint_.setSelectedId(pref_device_index, NotificationType::dontSendNotification);
 }
 
-void FxSettingsDialog::AudioSettingsPane::updateEndpointText()
+void FxSettingsDialog::AudioSettingsPane::updateEqualizerBandsText()
 {
-	auto endpoints = FxModel::getModel().getOutputDevices();
+	auto id = equalizer_.getSelectedId();
 
-	auto count = preferred_endpoint_.getNumItems();
-	if (count == endpoints.size() + 2)
+	for (auto bands : equalizer_bands_)
 	{
-		preferred_endpoint_.changeItemText(count-1, TRANS("Newly connected output device"));
-		preferred_endpoint_.changeItemText(count, TRANS("None"));
-	}	
+		equalizer_.changeItemText(bands, String(bands) + TRANS(" Bands"));
+	}
+
+	if (equalizer_.getSelectedId() == 0 && id != 0)
+	{
+		equalizer_.setSelectedId(id, juce::dontSendNotification);
+	}
+}
+
+void FxSettingsDialog::AudioSettingsPane::visibilityChanged()
+{
+	if (isVisible())
+	{
+		output_preference_.update();
+    }
 }
 
 void FxSettingsDialog::AudioSettingsPane::mouseEnter(const MouseEvent& mouse_event)
 {
 	Component::mouseEnter(mouse_event);
-
-	volume_.showValue(volume_.isMouseOver(false));
 }
 
 void FxSettingsDialog::AudioSettingsPane::mouseExit(const MouseEvent& mouse_event)
 {
 	Component::mouseEnter(mouse_event);
-
-	volume_.showValue(volume_.isMouseOver(false));
 }
 
 FxSettingsDialog::GeneralSettingsPane::GeneralSettingsPane() :
@@ -476,8 +562,7 @@ FxSettingsDialog::GeneralSettingsPane::GeneralSettingsPane() :
 	launch_toggle_(TRANS("Launch on system startup")),
 	hide_help_tips_toggle_(TRANS("Hide help tips for audio controls")),
 	hide_notifications_toggle_(TRANS("Hide notifications")),
-	hotkeys_toggle_(TRANS("Disable keyboard shortcuts")),
-	reset_presets_button_(TRANS("Reset presets to factory defaults"))
+	hotkeys_toggle_(TRANS("Disable keyboard shortcuts"))
 {
 	StringArray hotKeySettingsKeys = { FxController::HK_CMD_ON_OFF, FxController::HK_CMD_OPEN_CLOSE, FxController::HK_CMD_NEXT_PRESET, FxController::HK_CMD_PREVIOUS_PRESET, FxController::HK_CMD_NEXT_OUTPUT };
 	StringArray hotkey_names = { "Turn FxSound On/Off", "Open/Close FxSound",
@@ -539,14 +624,6 @@ FxSettingsDialog::GeneralSettingsPane::GeneralSettingsPane() :
 	hide_notifications_toggle_.setToggleState(FxController::getInstance().isNotificationsHidden(), NotificationType::dontSendNotification);
 	hide_notifications_toggle_.onClick = [this]() { FxController::getInstance().setNotificationsHidden(hide_notifications_toggle_.getToggleState()); };
 
-	reset_presets_button_.setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-	reset_presets_button_.setEnabled(FxModel::getModel().getUserPresetCount() > 0);
-    reset_presets_button_.setMouseCursor(MouseCursor::PointingHandCursor);
-	reset_presets_button_.onClick = [this]() {
-		FxController::getInstance().resetPresets();
-		reset_presets_button_.setEnabled(false);
-	};
-
 	auto os = SystemStats::getOperatingSystemType();
 	if (os == SystemStats::OperatingSystemType::Windows7)
 	{
@@ -556,7 +633,6 @@ FxSettingsDialog::GeneralSettingsPane::GeneralSettingsPane() :
 	addAndMakeVisible(&hide_help_tips_toggle_);
 	addAndMakeVisible(&hide_notifications_toggle_);
 	addAndMakeVisible(&hotkeys_toggle_);
-	addAndMakeVisible(&reset_presets_button_);
 	addAndMakeVisible(&language_switch_);
 
 	setText();
@@ -594,8 +670,6 @@ void FxSettingsDialog::GeneralSettingsPane::resized()
 		hotkey_label->setBounds(HOTKEY_LABEL_X, y, getWidth()-HOTKEY_LABEL_X, HOTKEY_LABEL_HEIGHT);
 		y += HOTKEY_LABEL_HEIGHT + 10;
 	}
-	
-	resizeResetButton(X_MARGIN, y + 10);
 }
 
 void FxSettingsDialog::GeneralSettingsPane::paint(Graphics& g)
@@ -617,40 +691,9 @@ void FxSettingsDialog::GeneralSettingsPane::setText()
 	hide_notifications_toggle_.setButtonText(TRANS("Hide notifications"));
 
     hotkeys_toggle_.setButtonText(TRANS("Disable keyboard shortcuts"));
-    reset_presets_button_.setButtonText(TRANS("Reset presets to factory defaults"));
-	
-	resizeResetButton(reset_presets_button_.getX(), reset_presets_button_.getY());
 }
 
-void FxSettingsDialog::GeneralSettingsPane::resizeResetButton(int x, int y)
-{
-	String buttonText = reset_presets_button_.getButtonText();
-	
-	int index = 0;
-	int lineCount = 1;
-	do {
-		index = buttonText.indexOfChar(index, L'\n');
-		if (index >= 0)
-		{
-			index++;
-			lineCount++;
-		}
-		else
-		{
-			break;
-		}
-	} while (lineCount <= 3); // Resize the button height for upto 3 lines of text
-
-	int buttonWidth = min(reset_presets_button_.getBestWidthForHeight(BUTTON_HEIGHT * lineCount), MAX_BUTTON_WIDTH);
-	if (buttonWidth < BUTTON_WIDTH)
-	{
-		buttonWidth = BUTTON_WIDTH;
-	}
-
-	reset_presets_button_.setBounds(x, y, buttonWidth, BUTTON_HEIGHT * lineCount);
-}
-
-FxSettingsDialog::HelpSettingsPane::HelpSettingsPane() : SettingsPane("Help"), debug_log_toggle_(TRANS("Disable debug logging"))
+FxSettingsDialog::HelpSettingsPane::HelpSettingsPane() : SettingsPane("Help"), auto_updates_toggle_(TRANS("Automatic updates"))
 {	
 	version_title_.setColour(Label::ColourIds::textColourId, getLookAndFeel().findColour(TextButton::textColourOnId));
 	version_title_.setJustificationType(Justification::centredLeft);
@@ -669,10 +712,14 @@ FxSettingsDialog::HelpSettingsPane::HelpSettingsPane() : SettingsPane("Help"), d
     feedback_link_.setURL(URL("https://james722808.typeform.com/to/QfEP5QrP"));
 	feedback_link_.setJustificationType(Justification::topLeft);
 
-	debug_log_toggle_.setMouseCursor(MouseCursor::PointingHandCursor);
-	debug_log_toggle_.setToggleState(!FxModel::getModel().getDebugLogging(), NotificationType::dontSendNotification);
-	debug_log_toggle_.setColour(ToggleButton::ColourIds::tickColourId, getLookAndFeel().findColour(TextButton::textColourOnId));
-	debug_log_toggle_.setColour(ToggleButton::ColourIds::textColourId, getLookAndFeel().findColour(TextButton::textColourOnId));
+	auto_updates_toggle_.setMouseCursor(MouseCursor::PointingHandCursor);
+	auto_updates_toggle_.setToggleState(FxController::getInstance().getAutoUpdates(), NotificationType::dontSendNotification);
+	auto_updates_toggle_.setColour(ToggleButton::ColourIds::tickColourId, getLookAndFeel().findColour(TextButton::textColourOnId));
+	auto_updates_toggle_.setColour(ToggleButton::ColourIds::textColourId, getLookAndFeel().findColour(TextButton::textColourOnId));
+
+	auto_updates_toggle_.onClick = [this]() {
+		FxController::getInstance().setAutoUpdates(auto_updates_toggle_.getToggleState());
+	};
 
     setText();
 
@@ -684,8 +731,7 @@ FxSettingsDialog::HelpSettingsPane::HelpSettingsPane() : SettingsPane("Help"), d
 	addChildComponent(quicktour_link_);
 	addChildComponent(submitlogs_link_);
 	addAndMakeVisible(helpcenter_link_);
-	addAndMakeVisible(updates_button_);
-	addChildComponent(debug_log_toggle_);
+	addAndMakeVisible(auto_updates_toggle_);
 }
 
 void FxSettingsDialog::HelpSettingsPane::resized()
@@ -699,7 +745,7 @@ void FxSettingsDialog::HelpSettingsPane::resized()
 	support_title_.setBounds(X_MARGIN, changelog_link_.getBottom()+20, getWidth()-X_MARGIN, TITLE_HEIGHT);
 	helpcenter_link_.setBounds(X_MARGIN+5, support_title_.getBottom()+10, getWidth()-X_MARGIN, HYPERLINK_HEIGHT);
 	maintenance_title_.setBounds(X_MARGIN, helpcenter_link_.getBottom()+20, getWidth()-X_MARGIN, TITLE_HEIGHT);
-	updates_button_.setBounds(X_MARGIN+5, maintenance_title_.getBottom()+10, BUTTON_WIDTH, HYPERLINK_HEIGHT);
+	auto_updates_toggle_.setBounds(X_MARGIN + 5, maintenance_title_.getBottom() + 10, BUTTON_WIDTH, TOGGLE_BUTTON_HEIGHT);
 }
 
 void FxSettingsDialog::HelpSettingsPane::paint(Graphics& g)
@@ -731,19 +777,6 @@ void FxSettingsDialog::HelpSettingsPane::setText()
     quicktour_link_.setButtonText(TRANS("Quick tour"));    
     submitlogs_link_.setButtonText(TRANS("Submit debug logs"));    
     helpcenter_link_.setButtonText(TRANS("Help center"));        
-    feedback_link_.setButtonText(TRANS("Feedback"));    
-    updates_button_.setButtonText(TRANS("Check for updates"));
-
-	updates_button_.onClick = [this]() {
-		ChildProcess child_process;
-		child_process.start("updater.exe /checknow");
-	};
-}
-
-void FxSettingsDialog::HelpSettingsPane::buttonStateChanged(Button* button)
-{
-	if (button == &debug_log_toggle_)
-	{
-		FxModel::getModel().setDebugLogging(!debug_log_toggle_.getToggleState());
-	}
+    feedback_link_.setButtonText(TRANS("Feedback"));
+	auto_updates_toggle_.setButtonText(TRANS("Automatic updates"));;
 }

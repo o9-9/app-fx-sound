@@ -2,6 +2,9 @@
 FxSound
 Copyright (C) 2025  FxSound LLC
 
+Contributors:
+	www.theremino.com (2025)
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -27,19 +30,6 @@ class FxModel final
 public:
 	enum Event { Notification=1, Subscription, PresetSelected, PresetListUpdated, PresetModified, OutputSelected, OutputListUpdated, OutputError, Other };
 	enum PresetType { AppPreset=1, UserPreset=2 };
-
-	struct AccountInfo final
-	{
-		String email;
-		String subscription;
-		bool trial;
-	};
-
-	struct AccountLog final
-	{
-		int64_t next_limited_playback_time;
-		uint32_t playback_duration;
-	};
 
 	struct Preset final
 	{
@@ -102,14 +92,29 @@ public:
 		return output_devices_;
 	}
 
-	int getSelectedOutput()
+	SoundDevice getSelectedOutput()
 	{
-		return selected_output_;
+		return selected_output_device_;
 	}
 
-	void setSelectedOutput(int selected_output, const SoundDevice& sound_device, bool notify=true)
+	int getSelectedOutputIndex()
 	{
-		selected_output_ = selected_output;
+		int selected_output_id = 0;
+		for (auto& output_device : output_devices_)
+		{
+			if (output_device.pwszID == selected_output_device_.pwszID)
+			{
+				return selected_output_id;
+			}
+
+			selected_output_id++;
+		}
+
+		return -1;
+	}
+
+	void setSelectedOutput(const SoundDevice& sound_device, bool notify=true)
+	{
 		selected_output_device_ = sound_device;
 		if (notify)
 		{
@@ -117,46 +122,10 @@ public:
 		}
 	}
 
-	bool isMonoOutputSelected()
-	{
-		return selected_output_device_.deviceNumChannel < 2;
-	}
-
     void notifyOutputError()
     {
         notifyListeners(Event::OutputError);
     }
-
-	AccountInfo getAccountInfo() const
-	{
-		return account_info_;
-	}
-
-	void setEmail(String email)
-	{
-		account_info_.email = email;
-	}
-
-	void setSubscription(String subscription)
-	{
-		account_info_.subscription = subscription;
-		notifyListeners(Event::Subscription);
-	}
-
-	AccountLog getAccountLog() const
-	{
-		return account_log_;
-	}
-
-	void setAccountLog(const AccountLog& account_log)
-	{
-		account_log_ = account_log;
-	}
-
-	void setTrial(bool trial)
-	{
-		account_info_.trial = trial;
-	}
 
 	bool getHotkeySupport()
 	{
@@ -225,10 +194,8 @@ private:
 	bool preset_modified_;
 	StringArray output_names_;
 	int selected_preset_;
-	int selected_output_;
     bool output_disconnected_;
-	AccountInfo account_info_;
-	AccountLog account_log_;
+
 	bool hotkey_support_;
 	bool menu_clicked_;
 	int language_;

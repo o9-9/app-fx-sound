@@ -38,6 +38,7 @@ struct SoundDevice {
 	bool isDFXDevice = false;
 	bool isUserSelectedPlaybackDevice = false;
 	bool isDefaultDevice = false;
+    bool isActive = false;
 
 	std::wstring pwszID; // For the GUID ID strings for each device, all devices combined.
 	std::wstring pwszIDRealDevices; // For the GUID ID strings for each real playback device.
@@ -54,6 +55,7 @@ class AudioPassthruCallback
 {
 public:
 	virtual void onSoundDeviceChange(std::vector<SoundDevice> sound_devices) = 0;
+	virtual void onSoundDeviceChange() = 0;
 };
 
 class AudioPassthruPrivate;
@@ -64,13 +66,15 @@ public:
 	~AudioPassthru();
 	int init();
 	void mute(bool mute);
-	std::vector<SoundDevice> getSoundDevices();
+	std::vector<SoundDevice> getSoundDevices(bool active_devices = true);
 	int setBufferLength(int i_buffer_length_msecs);
 	int processTimer();
 	void setDspProcessingModule(DfxDsp* pDspProcessingModule);
 	void setAsPlaybackDevice(const SoundDevice sound_device);
 	void registerCallback(AudioPassthruCallback *callback);
     bool isPlaybackDeviceAvailable();
+	bool checkDeviceChanges();
+	void restoreDefaultPlaybackDevice();
 
 private:
 	AudioPassthruPrivate *data_;

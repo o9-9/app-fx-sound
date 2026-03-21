@@ -38,7 +38,7 @@ public:
 
 		hint_text_.setName(L"hintLabel");
 		hint_text_.setFont(theme.getNormalFont());
-		hint_text_.setColour(Label::ColourIds::textColourId, Colour(0x7F7F7F).withAlpha(1.0f));
+		hint_text_.setColour(Label::ColourIds::textColourId, Colour(FXCOLOR(HintText)).withAlpha(1.0f));
 		hint_text_.setJustificationType(Justification::centredLeft);
 		addAndMakeVisible(hint_text_);
 
@@ -54,7 +54,7 @@ public:
 		}
 		preset_editor_.setName(L"presetName");
 		preset_editor_.setFont(theme.getNormalFont());
-		preset_editor_.setColour(TextEditor::ColourIds::backgroundColourId, Colour(0x000000).withAlpha(0.0f));
+		preset_editor_.setColour(TextEditor::ColourIds::backgroundColourId, Colour(FXCOLOR(DefaultFill)).withAlpha(0.0f));
 		preset_editor_.setInputRestrictions(64);
 		preset_editor_.setInputFilter(&preset_name_input_filter_, false);
 		preset_editor_.addListener(this);
@@ -112,12 +112,12 @@ private:
 		switch (preset_status_)
 		{
 		case Status::Valid:
-			outline_colour = Colour(0xff009cdd);
+			outline_colour = Colour(FXCOLOR(ValidTextBorder)).withAlpha(1.0f);
 			break;
 
 		case Status::Empty:
 		case Status::Invalid:
-			outline_colour = Colour(0xffd51535);
+			outline_colour = Colour(FXCOLOR(InvalidTextBorder)).withAlpha(1.0f);
 		}
 
 		g.setColour(findColour(TextEditor::backgroundColourId));
@@ -196,29 +196,20 @@ FxMainWindow::FxMainWindow() : power_button_(L"powerButton"), menu_button_(L"men
 	power_button_.addListener(this);
 
 	menu_button_.setMouseCursor(MouseCursor::PointingHandCursor);
-	menu_button_.setSize(BUTTON_WIDTH+2, BUTTON_WIDTH+6);
-	menu_button_.setHelpText(TRANS("Menu Button"));
-	menu_image_ = Drawable::createFromImageData(BinaryData::menu_svg, BinaryData::menu_svgSize);
-	menu_hover_image_ = Drawable::createFromImageData(BinaryData::menu_hover_svg, BinaryData::menu_hover_svgSize);
-	menu_button_.setImages(menu_image_.get(), menu_hover_image_.get());
+	menu_button_.setSize(BUTTON_WIDTH, BUTTON_WIDTH);
+	menu_button_.setHelpText(TRANS("Menu Button"));;
 	menu_button_.setWantsKeyboardFocus(true);
 	menu_button_.addListener(this);
 
-	resize_button_.setMouseCursor(MouseCursor::PointingHandCursor);
-	setResizeImage();
+	resize_button_.setMouseCursor(MouseCursor::PointingHandCursor);	
 	resize_button_.setHelpText(TRANS("Resize Button"));
 	resize_button_.setWantsKeyboardFocus(true);
-	resize_button_.addListener(this);
-
-	auto& theme = dynamic_cast<FxTheme&>(LookAndFeel::getDefaultLookAndFeel());
+	resize_button_.addListener(this);	
 
 	donate_button_.setMouseCursor(MouseCursor::PointingHandCursor);
 	donate_button_.setSize(BUTTON_WIDTH + 2, BUTTON_WIDTH + 6);
 	donate_button_.setHelpText(TRANS("Donate"));
 	donate_button_.setTooltip(TRANS("Donate"));
-	donate_image_ = Drawable::createFromImageData(BinaryData::donate_svg, BinaryData::donate_svgSize);
-	donate_hover_image_ = Drawable::createFromImageData(BinaryData::donate_hover_svg, BinaryData::donate_hover_svgSize);
-	donate_button_.setImages(donate_image_.get(), donate_hover_image_.get());
 	donate_button_.setWantsKeyboardFocus(true);
 	donate_button_.onClick = [this]() {
 		URL url("https://www.paypal.com/donate/?hosted_button_id=JVNQGYXCQ2GPG");
@@ -228,20 +219,17 @@ FxMainWindow::FxMainWindow() : power_button_(L"powerButton"), menu_button_(L"men
 	minimize_button_.setMouseCursor(MouseCursor::PointingHandCursor);
 	minimize_button_.setSize(BUTTON_WIDTH + 2, BUTTON_WIDTH + 6);
 	minimize_button_.setHelpText(TRANS("Minimize Button"));
-	minimize_image_ = Drawable::createFromImageData(BinaryData::min_window_svg, BinaryData::min_window_svgSize);
-	minimize_hover_image_ = Drawable::createFromImageData(BinaryData::min_window_hover_svg, BinaryData::min_window_hover_svgSize);
-	minimize_button_.setImages(minimize_image_.get(), minimize_hover_image_.get());
 	minimize_button_.setWantsKeyboardFocus(true);
 	minimize_button_.addListener(this);
 
 	help_bubble_.addToDesktop(0);
-	help_bubble_.setColour(BubbleComponent::ColourIds::backgroundColourId, Colour(0x0).withAlpha(1.0f));
-	help_bubble_.setColour(BubbleComponent::ColourIds::outlineColourId, theme.findColour(TextEditor::textColourId));
 	help_bubble_.setAlwaysOnTop(true);
 
+	setLookAndFeel();
+
+	addToolbarButton(&menu_button_, false);
 	addToolbarButton(&minimize_button_);
 	addToolbarButton(&resize_button_);
-	addToolbarButton(&menu_button_);
 	addToolbarButton(&power_button_);
 	addToolbarButton(&donate_button_);
 }
@@ -277,7 +265,7 @@ void FxMainWindow::showLiteView()
 {
 	setContent(&lite_view_);
     setResizeImage();
-	setAlwaysOnTop(true);
+	setAlwaysOnTop(FxController::getInstance().isAlwaysOnTop());
 
 	auto bounds = getBounds();
 	auto pos = FxController::getInstance().getSystemTrayWindowPosition(bounds.getWidth(), bounds.getHeight());
@@ -290,37 +278,31 @@ void FxMainWindow::showProView()
     pro_view_.update();
 	setContent(&pro_view_);
     setResizeImage();
-	setAlwaysOnTop(false);
+	setAlwaysOnTop(FxController::getInstance().isAlwaysOnTop());
+	
+	int x = 0;
+	int y = 0;
 
-	auto display = Desktop::getInstance().getDisplays().getPrimaryDisplay();
-	if (display != nullptr)
+	auto bounds = getBounds();
+	auto desktop_bounds = Desktop::getInstance().getDisplays().getTotalBounds(true);
+
+	FxController::getInstance().getWindowPosition(x, y);
+	if (x == 0 && y == 0)
 	{
-		auto bounds = getBounds();
-		if (display->userArea.getX() > bounds.getX())
-		{
-			bounds.setX(display->userArea.getX() + 10);
-		}
-		else if (display->userArea.getRight() < bounds.getRight())
-		{
-			bounds.setX(display->userArea.getRight() - bounds.getWidth() - 10);
-		}
-
-		if (display->userArea.getY() > bounds.getY())
-		{
-			bounds.setY(display->userArea.getY() + 10);
-		}
-		else if (display->userArea.getBottom() < bounds.getBottom())
-		{
-			bounds.setY(display->userArea.getBottom() - bounds.getHeight() - 10);
-		}
-
-		setBounds(bounds);
+		centreWithSize(getWidth(), getHeight());		
 	}
-}
-
-void FxMainWindow::updateView()
-{
-    pro_view_.update();
+	else 
+	{
+		bounds.setPosition(Point<int>(x, y));
+		if (desktop_bounds.contains(bounds))
+		{
+			setBounds(bounds);
+		}
+		else
+		{
+			centreWithSize(getWidth(), getHeight());
+		}
+	}	
 }
 
 void FxMainWindow::startVisualizer()
@@ -333,18 +315,40 @@ void FxMainWindow::pauseVisualizer()
     pro_view_.pauseVisualizer();
 }
 
+void FxMainWindow::setLookAndFeel()
+{
+	auto& theme = dynamic_cast<FxTheme&>(LookAndFeel::getDefaultLookAndFeel());
+
+	menu_image_ = Drawable::createFromImageData(FXIMAGE(MenuButton), FXIMAGESIZE(MenuButton));
+	menu_hover_image_ = Drawable::createFromImageData(FXIMAGE(MenuButtonHover), FXIMAGESIZE(MenuButtonHover));
+	menu_button_.setImages(menu_image_.get(), menu_hover_image_.get());
+
+	donate_image_ = Drawable::createFromImageData(FXIMAGE(DonateButton), FXIMAGESIZE(DonateButton));
+	donate_hover_image_ = Drawable::createFromImageData(FXIMAGE(DonateButtonHover), FXIMAGESIZE(DonateButtonHover));
+	donate_button_.setImages(donate_image_.get(), donate_hover_image_.get());
+
+	minimize_image_ = Drawable::createFromImageData(FXIMAGE(MinimizeWindowButton), FXIMAGESIZE(MinimizeWindowButton));
+	minimize_hover_image_ = Drawable::createFromImageData(FXIMAGE(MinimizeWindowButtonHover), FXIMAGESIZE(MinimizeWindowButtonHover));
+	minimize_button_.setImages(minimize_image_.get(), minimize_hover_image_.get());
+
+	help_bubble_.setColour(BubbleComponent::ColourIds::backgroundColourId, Colour(FXCOLOR(DefaultFill)).withAlpha(1.0f));
+	help_bubble_.setColour(BubbleComponent::ColourIds::outlineColourId, theme.findColour(TextEditor::textColourId));
+
+	setResizeImage();
+}
+
 void FxMainWindow::setResizeImage()
 {
 	if (FxController::getInstance().getCurrentView() == ViewType::Pro)
 	{
-		resize_image_ = Drawable::createFromImageData(BinaryData::minimize_svg, BinaryData::minimize_svgSize);
-		resize_hover_image_ = Drawable::createFromImageData(BinaryData::minimize_hover_svg, BinaryData::minimize_hover_svgSize);
+		resize_image_ = Drawable::createFromImageData(FXIMAGE(MinimizeButton), FXIMAGESIZE(MinimizeButton));
+		resize_hover_image_ = Drawable::createFromImageData(FXIMAGE(MinimizeButtonHover), FXIMAGESIZE(MinimizeButtonHover));
 		resize_button_.setSize(BUTTON_WIDTH+2, BUTTON_WIDTH+2);
 	}
 	else
 	{
-		resize_image_ = Drawable::createFromImageData(BinaryData::maximize_svg, BinaryData::maximize_svgSize);
-		resize_hover_image_ = Drawable::createFromImageData(BinaryData::maximize_hover_svg, BinaryData::maximize_hover_svgSize);
+		resize_image_ = Drawable::createFromImageData(FXIMAGE(MaximizeButton), FXIMAGESIZE(MaximizeButton));
+		resize_hover_image_ = Drawable::createFromImageData(FXIMAGE(MaximizeButtonHover), FXIMAGESIZE(MaximizeButtonHover));
 		resize_button_.setSize(BUTTON_WIDTH, BUTTON_WIDTH); 	
 	}
 
@@ -363,7 +367,10 @@ void FxMainWindow::setIcon(bool power, bool processing)
 	{
 		if (processing)
 		{
-			icon = LoadIcon(hInst, L"IDI_LOGO_RED");
+			if (FxTheme::getThemeMode() == FxThemeMode::Dark)
+				icon = LoadIcon(hInst, L"IDI_LOGO_RED");
+			else
+				icon = LoadIcon(hInst, L"IDI_LOGO_BLUE");
 		}
 		else
 		{
@@ -447,17 +454,39 @@ void FxMainWindow::showMenu()
 		url.launchInDefaultBrowser();
 	};
 
+	auto checkForUpdatesClicked = []() {
+		ChildProcess child_process;
+		child_process.start("updater.exe /checknow");
+	};
+
 	auto donateClicked = []() {
 		URL url("https://www.paypal.com/donate/?hosted_button_id=JVNQGYXCQ2GPG");
 		url.launchInDefaultBrowser();
 	};
 
+	auto darkModeClicked = [this]() {
+		FxController::getInstance().setThemeMode(FxThemeMode::Dark);
+	};
+
+	auto lightModeClicked = [this]() {
+		FxController::getInstance().setThemeMode(FxThemeMode::Light);
+	};
+
+	auto alwaysOnTopClicked = [this]() {
+		auto& controller = FxController::getInstance();
+		controller.setAlwaysOnTop(!controller.isAlwaysOnTop());
+		};
+
 	PopupMenu popup_menu;
 	PopupMenu save_menu;
 	PopupMenu rename_menu;
+	PopupMenu theme_menu;
 
 	save_menu.addCustomItem(1, std::make_unique<FxPresetMenuItem>(FxPresetMenuItem::Action::Save), nullptr);
 	rename_menu.addCustomItem(2, std::make_unique<FxPresetMenuItem>(FxPresetMenuItem::Action::Rename), nullptr);
+
+	theme_menu.addItem(TRANS("Dark"), true, FxTheme::getThemeMode() == FxThemeMode::Dark, darkModeClicked);
+	theme_menu.addItem(TRANS("Light"), true, FxTheme::getThemeMode() == FxThemeMode::Light, lightModeClicked);
 
 	popup_menu.addItem(TRANS("Settings"), settingsClicked);
 	popup_menu.addSeparator();
@@ -488,11 +517,15 @@ void FxMainWindow::showMenu()
 	popup_menu.addSeparator();
 	popup_menu.addItem(TRANS("Download Bonus Presets"), downloadClicked);
 	popup_menu.addSeparator();
+	popup_menu.addItem(TRANS("Check for updates"), checkForUpdatesClicked);
+	popup_menu.addSeparator();
+	popup_menu.addSubMenu(TRANS("Theme"), theme_menu);
+	popup_menu.addItem(TRANS("Always On Top"), true, isAlwaysOnTop(), alwaysOnTopClicked);
+	popup_menu.addSeparator();
 	popup_menu.addItem(TRANS("Donate"), donateClicked);
 
 	popup_menu.showAt(&menu_button_);
 }
-
 
 void FxMainWindow::buttonClicked(Button* button)
 {
@@ -540,7 +573,7 @@ void FxMainWindow::mouseEnter(const MouseEvent&)
 	}
 }
 
-void FxMainWindow::modelChanged(FxModel::Event model_event)
+void FxMainWindow::modelChanged(FxModel::Event)
 {
 	power_button_.setPowerState(FxModel::getModel().getPowerState());
 }
@@ -553,4 +586,24 @@ void FxMainWindow::userTriedToCloseWindow()
 void FxMainWindow::closeButtonPressed()
 {
 	FxController::getInstance().hideMainWindow();
+}
+
+void FxMainWindow::moved()
+{
+	if (FxController::getInstance().getCurrentView() == ViewType::Pro)
+	{
+		auto bounds = getBounds();
+		auto desktop_bounds = Desktop::getInstance().getDisplays().getTotalBounds(true);
+		if (desktop_bounds.contains(bounds))
+		{
+			// Save window position only if the whole window is visible on the desktop
+			FxController::getInstance().saveWindowPosition(bounds.getX(), bounds.getY());
+		}		
+	}
+}
+
+void FxMainWindow::lookAndFeelChanged()
+{
+	setLookAndFeel();
+	repaint();
 }

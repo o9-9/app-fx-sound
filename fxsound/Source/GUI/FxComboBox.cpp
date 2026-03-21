@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <JuceHeader.h>
 #include "FxComboBox.h"
+#include "FxTheme.h"
 
 //==============================================================================
 FxComboBox::FxComboBox()
@@ -28,6 +29,8 @@ FxComboBox::FxComboBox()
     setColour(ComboBox::ColourIds::textColourId, theme.getCurrentColourScheme().getUIColour(LookAndFeel_V4::ColourScheme::defaultText));
 
     error_ = false;
+
+    onShowPopup = []{};
 }
 
 void FxComboBox::highlightText(bool highlight)
@@ -60,11 +63,21 @@ void FxComboBox::setError(bool enable)
     if (enable)
     {
         error_ = true;
-        setColour(ComboBox::ColourIds::outlineColourId, Colour(0xffe33250));
+        setColour(ComboBox::ColourIds::outlineColourId, Colour(FXCOLOR(SliderTrack)).withAlpha(1.0f));
     }
     else
     {
         error_ = false;
-        setColour(ComboBox::ColourIds::outlineColourId, Colour(0x000000).withAlpha(1.0f));
+        setColour(ComboBox::ColourIds::outlineColourId, Colour(FXCOLOR(DefaultFill)).withAlpha(1.0f));
     }
+}
+
+void FxComboBox::showPopup()
+{
+    if (onShowPopup)
+    {
+        onShowPopup();
+    }
+
+    ComboBox::showPopup();
 }

@@ -43,6 +43,9 @@ FxView::FxView()
 	addAndMakeVisible(&endpoint_list_);
 	endpoint_list_.addListener(this);
 	endpoint_list_.addMouseListener(this, true);
+	endpoint_list_.onShowPopup = []() {
+		FxController::getInstance().checkDeviceChanges();
+		};
 
     addChildComponent(&error_notification_);
 }
@@ -106,7 +109,7 @@ void FxView::modelChanged(FxModel::Event model_event)
 
 	if (model_event == FxModel::Event::OutputSelected)
 	{
-		endpoint_list_.setSelectedId(FxModel::getModel().getSelectedOutput() + 1, NotificationType::dontSendNotification);
+		endpoint_list_.setSelectedId(FxModel::getModel().getSelectedOutputIndex() + 1, NotificationType::dontSendNotification);
 
         if (endpoint_list_.getError())
         {
@@ -122,12 +125,12 @@ void FxView::modelChanged(FxModel::Event model_event)
     {
         if (!FxController::getInstance().isPlaybackDeviceAvailable())
         {
-            endpoint_list_.setItemEnabled(FxModel::getModel().getSelectedOutput() + 1, false);
+            endpoint_list_.setItemEnabled(FxModel::getModel().getSelectedOutputIndex() + 1, false);
             endpoint_list_.setError(true);
         }
         else
         {
-            endpoint_list_.setItemEnabled(FxModel::getModel().getSelectedOutput() + 1, true);
+            endpoint_list_.setItemEnabled(FxModel::getModel().getSelectedOutputIndex() + 1, true);
             endpoint_list_.setError(false);
             error_notification_.setVisible(false);
         }
@@ -158,7 +161,7 @@ void FxView::modelChanged(FxModel::Event model_event)
 			{
 				name = name + L" *";
 			}
-			preset_list_.addItem(name, i+1);						
+			preset_list_.addItem(name, i+1);
 		}
 
 		preset_list_.setSelectedId(FxModel::getModel().getSelectedPreset() + 1, NotificationType::dontSendNotification);

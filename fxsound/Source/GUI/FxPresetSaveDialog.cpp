@@ -48,7 +48,7 @@ void FxPresetSaveDialog::closeButtonPressed()
     removeFromDesktop();
 }
 
-FxPresetSaveDialog::PresetSaveComponent::PresetSaveComponent() : save_button_(TRANS("Save")), cancel_button_(TRANS("Cancel"))
+FxPresetSaveDialog::PresetSaveComponent::PresetSaveComponent() : yes_button_(TRANS("Yes")), no_button_(TRANS("No"))
 {
     auto& theme = dynamic_cast<FxTheme&>(LookAndFeel::getDefaultLookAndFeel());
 
@@ -60,10 +60,10 @@ FxPresetSaveDialog::PresetSaveComponent::PresetSaveComponent() : save_button_(TR
     addAndMakeVisible(preset_name_editor_);
     preset_name_editor_.setWantsKeyboardFocus(true);
 
-    save_button_.setMouseCursor(MouseCursor::PointingHandCursor);
-    save_button_.setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-    addAndMakeVisible(save_button_);
-    save_button_.onClick = [this]() {
+    yes_button_.setMouseCursor(MouseCursor::PointingHandCursor);
+    yes_button_.setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+    addAndMakeVisible(yes_button_);
+    yes_button_.onClick = [this]() {
         if (preset_name_editor_.getStatus() == FxPresetNameEditor::Status::Valid)
         {
             auto preset_name = preset_name_editor_.getPresetName();
@@ -74,10 +74,10 @@ FxPresetSaveDialog::PresetSaveComponent::PresetSaveComponent() : save_button_(TR
         }
         };
 
-    cancel_button_.setMouseCursor(MouseCursor::PointingHandCursor);
-    cancel_button_.setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
-    addAndMakeVisible(cancel_button_);
-    cancel_button_.onClick = [this]() {
+    no_button_.setMouseCursor(MouseCursor::PointingHandCursor);
+    no_button_.setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
+    addAndMakeVisible(no_button_);
+    no_button_.onClick = [this]() {
         getParentComponent()->exitModalState(0);
         getParentComponent()->removeFromDesktop();
         };
@@ -104,8 +104,8 @@ void FxPresetSaveDialog::PresetSaveComponent::resized()
     preset_name_editor_.setBounds(component_area);
 
     component_area = juce::Rectangle<int>((WIDTH - ((BUTTON_WIDTH * 2) + 20)) / 2, preset_name_editor_.getBottom() + 20, BUTTON_WIDTH, BUTTON_HEIGHT);
-    save_button_.setBounds(component_area);
+    yes_button_.setBounds(component_area);
 
-    component_area = juce::Rectangle<int>(save_button_.getRight() + 20, preset_name_editor_.getBottom() + 20, BUTTON_WIDTH, BUTTON_HEIGHT);
-    cancel_button_.setBounds(component_area);
+    component_area = juce::Rectangle<int>(yes_button_.getRight() + 20, preset_name_editor_.getBottom() + 20, BUTTON_WIDTH, BUTTON_HEIGHT);
+    no_button_.setBounds(component_area);
 }

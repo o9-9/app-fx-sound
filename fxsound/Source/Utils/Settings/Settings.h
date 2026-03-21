@@ -2,6 +2,9 @@
 FxSound
 Copyright (C) 2025  FxSound LLC
 
+Contributors:
+	www.theremino.com (2025)
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -35,19 +38,16 @@ namespace FxSound
 		~Settings();
 
 		String getString(StringRef key) noexcept;
-		int    getInt(StringRef key) noexcept;
+		int    getInt(StringRef key, int default_value=0) noexcept;
 		double getDouble(StringRef key) noexcept;
-		bool   getBool(StringRef key) noexcept;
+		bool   getBool(StringRef key, bool default_value=false) noexcept;
+		juce::var getJson(juce::StringRef key) noexcept;
 
 		void setString(StringRef key, String value, bool default=false) noexcept;
 		void setInt(StringRef key, int value, bool default = false) noexcept;
 		void setDouble(StringRef key, double value, bool default = false) noexcept;
 		void setBool(StringRef key, bool value, bool default = false) noexcept;
-
-		String getSecure(String key);
-		void   setSecure(String key, String value);
-
-		static bool isAdminUser();
+		void setJson(juce::StringRef key, const juce::var& json) noexcept;
 
 	private:
 		ApplicationProperties app_default_properties_;
@@ -55,7 +55,6 @@ namespace FxSound
 		ApplicationProperties app_secure_properties_;
 		PropertySet default_settings_;
 		PropertiesFile* user_settings_;
-		PropertiesFile* secure_settings_;
 	};
 }
 

@@ -58,8 +58,8 @@ private:
 
         Label message_;
         FxPresetNameEditor preset_name_editor_;
-        TextButton save_button_;
-        TextButton cancel_button_;
+        TextButton yes_button_;
+        TextButton no_button_;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PresetSaveComponent);
     };

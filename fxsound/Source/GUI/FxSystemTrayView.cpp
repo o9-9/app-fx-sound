@@ -74,6 +74,11 @@ void FxSystemTrayView::setStatus(bool power, bool processing)
 
     wchar_t tool_tip[1024];
     swprintf_s(tool_tip, String(TRANS("FxSound is %s.")).toWideCharPointer(), param.toWideCharPointer());
+	wcscat_s(tool_tip, 1024, L"\n\n");
+    wcscat_s(tool_tip, 1024, String(TRANS("Output: ")).toWideCharPointer());
+    auto& model = FxModel::getModel();
+	String output_device_name = model.getSelectedOutput().deviceFriendlyName.c_str();
+	wcscat_s(tool_tip, 1024, output_device_name.toWideCharPointer());
 
     NOTIFYICONDATA nid = { sizeof(nid) };
 
@@ -83,7 +88,14 @@ void FxSystemTrayView::setStatus(bool power, bool processing)
     {
         if (processing)
         {
-            nid.hIcon = LoadIcon(hInst, L"IDI_LOGO_RED");
+            if (FxTheme::getThemeMode() == FxThemeMode::Dark)
+            {
+                nid.hIcon = LoadIcon(hInst, L"IDI_LOGO_RED");
+            }
+            else
+            {
+                nid.hIcon = LoadIcon(hInst, L"IDI_LOGO_BLUE");
+            }
         }
         else
         {
@@ -165,7 +177,14 @@ void FxSystemTrayView::addIcon()
     {
         if (FxController::getInstance().isAudioProcessing())
         {
-            nid.hIcon = LoadIcon(hInst, L"IDI_LOGO_RED");
+            if (FxTheme::getThemeMode() == FxThemeMode::Dark)
+            {
+                nid.hIcon = LoadIcon(hInst, L"IDI_LOGO_RED");
+            }
+            else
+            {
+                nid.hIcon = LoadIcon(hInst, L"IDI_LOGO_BLUE");
+            }
         }
         else
         {
@@ -196,6 +215,9 @@ void FxSystemTrayView::showContextMenu()
     PopupMenu context_menu;
 
     PopupMenu preset_menu;
+    PopupMenu theme_menu;
+
+    FxController::getInstance().checkDeviceChanges();
 
     auto id = PRESET_MENU_ID_START;
     auto count = FxModel::getModel().getPresetCount();
@@ -228,7 +250,7 @@ void FxSystemTrayView::showContextMenu()
         preset_menu.addItem(menu_item);
         id++;
     }
-
+   
     auto openClicked = []() {
         FxController::getInstance().showMainWindow();
     };
@@ -242,6 +264,19 @@ void FxSystemTrayView::showContextMenu()
         settings_dialog.runModalLoop();
     };
 
+    auto darkModeClicked = [this]() {
+        FxController::getInstance().setThemeMode(FxThemeMode::Dark);
+        };
+
+    auto lightModeClicked = [this]() {
+        FxController::getInstance().setThemeMode(FxThemeMode::Light);
+        };
+
+    auto alwaysOnTopClicked = []() {
+        auto& controller = FxController::getInstance();
+        controller.setAlwaysOnTop(!controller.isAlwaysOnTop());
+    };
+
     auto donateClicked = []() {
         URL url("https://www.paypal.com/donate/?hosted_button_id=JVNQGYXCQ2GPG");
         url.launchInDefaultBrowser();
@@ -250,6 +285,9 @@ void FxSystemTrayView::showContextMenu()
     auto exitClicked = []() {
         FxController::getInstance().exit();
     };
+
+    theme_menu.addItem(TRANS("Dark"), true, FxTheme::getThemeMode() == FxThemeMode::Dark, darkModeClicked);
+    theme_menu.addItem(TRANS("Light"), true, FxTheme::getThemeMode() == FxThemeMode::Light, lightModeClicked);
 
     PopupMenu::Item open(TRANS("Open"));
     PopupMenu::Item power;
@@ -271,9 +309,14 @@ void FxSystemTrayView::showContextMenu()
 
     context_menu.addItem(open);
     context_menu.addItem(power);
-    context_menu.addSubMenu(TRANS("Preset Select"), preset_menu, FxModel::getModel().getPowerState());
+    if (FxModel::getModel().getPowerState())
+    {
+        context_menu.addSubMenu(TRANS("Preset Select"), preset_menu);
+    }
     addOutputDeviceMenu(&context_menu);
     context_menu.addItem(settings);
+    context_menu.addSubMenu(TRANS("Theme"), theme_menu);
+    context_menu.addItem(TRANS("Always On Top"), true, FxController::getInstance().getMainWindow()->isAlwaysOnTop(), alwaysOnTopClicked);
     context_menu.addItem(donate);
     context_menu.addItem(exit);
 
@@ -313,7 +356,7 @@ void FxSystemTrayView::addOutputDeviceMenu(PopupMenu* context_menu)
             menu_item.setEnabled(false);
         }
 
-        if (id - OUTPUT_MENU_ID_START == FxModel::getModel().getSelectedOutput())
+        if (id - OUTPUT_MENU_ID_START == FxModel::getModel().getSelectedOutputIndex())
         {
             menu_item.setTicked(true);
         }

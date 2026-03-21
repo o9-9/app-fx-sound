@@ -2,6 +2,9 @@
 FxSound
 Copyright (C) 2025  FxSound LLC
 
+Contributors:
+    www.theremino.com (2025)
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -18,23 +21,33 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "FxVisualizer.h"
 #include "FxController.h"
+#include "FxTheme.h"
 
 FxVisualizer::FxVisualizer()
 {
     band_values_.resize(FxController::NUM_SPECTRUM_BANDS);
     band_graph_.resize(FxController::NUM_SPECTRUM_BANDS * NUM_BARS);
 
+#if JUCE_MAJOR_VERSION >= 8
     start();
+#else
+    calcGradient();
+    reset();
+    setFramesPerSecond(10);
+#endif
 
     setOpaque(false);
     setSize(WIDTH, HEIGHT);
 }
 
 void FxVisualizer::start()
-{
-    if (vblank_attachment == nullptr)
+{    
+    calcGradient();
+
+#if JUCE_MAJOR_VERSION >= 8
+    if (vblank_listener_ == nullptr)
     {
-        vblank_attachment = std::make_unique<juce::VBlankAttachment>(
+        vblank_listener_ = std::make_unique<juce::VBlankAttachment>(
             this,
             [this](double timestamp)
             {
@@ -56,22 +69,31 @@ void FxVisualizer::start()
                     {
                         reset();
                         repaint();
-                        vblank_attachment.reset();
+                        vblank_listener_.reset();
                     }
                 }
             });
     }
+#else
+    setFramesPerSecond(30);
+#endif
 }
 
 void FxVisualizer::pause()
 {
+    calcGradient();
+
+#if JUCE_MAJOR_VERSION >= 8
     reset();
     repaint();
 
-    if (vblank_attachment != nullptr)
+    if (vblank_listener_ != nullptr)
     {
-        vblank_attachment.reset();
+        vblank_listener_.reset();
     }
+#else
+    setFramesPerSecond(10);
+#endif
 }
 
 void FxVisualizer::reset()
@@ -84,6 +106,9 @@ void FxVisualizer::reset()
 
 void FxVisualizer::update()
 {
+    if (!isEnabled())
+        return;
+
     FxController::getInstance().getSpectrumBandValues(band_values_);
 
     for (int i = 0; i < FxController::NUM_SPECTRUM_BANDS; i++)
@@ -107,81 +132,66 @@ void FxVisualizer::paint(Graphics& g)
 {
     auto bounds = getLocalBounds();
 
-    g.setFillType(FillType(Colour(0x0f0f0f).withAlpha(1.0f)));
+    g.setFillType(FillType(Colour(FXCOLOR(ControlBackground)).withAlpha(1.0f)));
     g.fillRoundedRectangle(bounds.toFloat(), 8);
 
+    g.setGradientFill(gradient_);
+
+    // ------------------------------------------------------ SPECTRUM AREA - LEFT AND SIZE 
+    Path barsPath;
+
+    float x = 27;
+    float dx = 9.1;
+
+    for (auto i = 0; i < FxController::NUM_SPECTRUM_BANDS * NUM_BARS; i++)
+    {
+        float band_value = band_graph_[i] == 0.0 ? 0.01 : band_graph_[i];
+        float height = band_value * 100.0f;
+
+        barsPath.addRectangle(x, bounds.getHeight() / 2.0f - height / 2.0f, 4.0f, height);
+        x += dx;
+    }
+
+    g.fillPath(barsPath);
+}
+
+void FxVisualizer::enablementChanged()
+{
+    if (isEnabled())
+    {
+        start();
+    }
+    else
+    {
+        pause();
+        reset();
+    }
+}
+
+void FxVisualizer::lookAndFeelChanged()
+{
+    calcGradient();
+    repaint();
+}
+
+void FxVisualizer::calcGradient()
+{
     float alpha = 0.75;
     if (FxController::getInstance().isAudioProcessing())
     {
         alpha = 1.0;
     }
-    
-    ColourGradient gradient(isEnabled() ? Colour(0xd51535).withAlpha(alpha) : Colour(0xd51535).withSaturation(0.0f).withAlpha(alpha),
-                            2.0f, 0.0f, 
-                            isEnabled() ? Colour(0xd51535).withAlpha(alpha) : Colour(0xd51535).withSaturation(0.0f).withAlpha(alpha),
-                            2.0f, 100.0f, false);
+
+    gradient_ = ColourGradient(isEnabled() ? Colour(FXCOLOR(GraphHigh)).withAlpha(alpha) : Colour(FXCOLOR(GraphHigh)).withSaturation(0.0f).withAlpha(alpha),
+        2.0f, 0.0f,
+        isEnabled() ? Colour(FXCOLOR(GraphHigh)).withAlpha(alpha) : Colour(FXCOLOR(GraphHigh)).withSaturation(0.0f).withAlpha(alpha),
+        2.0f, 100.0f, false);
     if (isEnabled())
     {
-        gradient.addColour(0.5f, Colour(0xfe566a).withAlpha(alpha));
+        gradient_.addColour(0.5f, Colour(FXCOLOR(GraphLow)).withAlpha(alpha));
     }
     else
     {
-        gradient.addColour(0.5f, Colour(0xfe566a).withSaturation(0.0f).withAlpha(alpha));
-    }
-    g.setGradientFill(gradient);
-
-    float x = 55;
-    for (auto i = 0; i < FxController::NUM_SPECTRUM_BANDS*NUM_BARS; i++)
-    {
-        float band_value = band_graph_[i] == 0.0 ? 0.01 : band_graph_[i];
-        float height = band_value * 100.0f;
-
-        juce::Rectangle<float> rect{ x, bounds.getHeight() / 2 - height / 2, 4, height };        
-        g.fillRect(rect);
-
-        x += 7;
+        gradient_.addColour(0.5f, Colour(FXCOLOR(GraphLow)).withSaturation(0.0f).withAlpha(alpha));
     }
 }
-
-#if 0
-void FxVisualizer::paint(Graphics& g)
-{
-    auto bounds = getLocalBounds();
-    g.setFillType(FillType(Colour(0x0).withAlpha(0.2f)));
-    g.fillRoundedRectangle(bounds.toFloat(), 8);
-
-    g.setFillType(FillType(Colour(0xe33250).withAlpha(1.0f)));
-
-    float x = 80;
-    for (auto index = 0; index < FxController::NUM_SPECTRUM_BANDS; index++)
-    {
-        float band_value = band_values_[index];
-        float height = 0;
-
-        x += 4;
-
-        if (band_value > 0 || band_value <= 1)
-        {
-            for (auto i = 1; i <= 5; i++)
-            {
-                height = std::sin((band_value / 5 * i) * (3.14159265 / 2)) * 100;
-                juce::Rectangle<float> rect{ x, bounds.getHeight() / 2 - height / 2, 4, height };
-                g.fillRect(rect);
-                x += 8;
-            }
-
-            for (auto i = 4; i >= 1; i--)
-            {
-                height = std::sin((band_value / 5 * i) * (3.14159265 / 2)) * 100;
-                juce::Rectangle<float> rect{ x, bounds.getHeight() / 2 - height / 2, 4, height };
-                g.fillRect(rect);
-                x += 8;
-            }
-        }
-        else
-        {
-            x += 8 * 9;
-        }
-    }
-}
-#endif

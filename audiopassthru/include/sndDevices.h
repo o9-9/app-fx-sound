@@ -343,6 +343,7 @@ struct sndDevicesHdlType {
 	WCHAR pwszID[SND_DEVICES_MAX_NUM_DEVICES][PT_MAX_GENERIC_STRLEN]; // For the GUID ID strings for each device, all devices combined.
 	LPWSTR pwszIDRealDevices[SND_DEVICES_MAX_NUM_DEVICES]; // For the GUID ID strings for each real playback device.
 	WCHAR pwszIDPreviousRealDevices[SND_DEVICES_MAX_NUM_DEVICES][PT_MAX_GENERIC_STRLEN]; // To detect when a new devices is added.
+    DWORD deviceState[SND_DEVICES_MAX_NUM_DEVICES]; // State of each device.
 
 	wchar_t deviceFriendlyName[SND_DEVICES_MAX_NUM_DEVICES][PT_MAX_GENERIC_STRLEN];  // Friendly name, ie "DFX Audio Enhancer 10.5", all devices.
 	wchar_t deviceDescription[SND_DEVICES_MAX_NUM_DEVICES][PT_MAX_GENERIC_STRLEN];  // Descriptive name, ie "Speakers", all devices.
@@ -425,6 +426,8 @@ struct sndDevicesHdlType {
 
 	// Module common status flag, set by functions that can't complete their requestion operation
 	int function_status;
+
+	void (*deviceChangeCallback)();
 };
 
 _COM_SMARTPTR_TYPEDEF(IMMDevice, __uuidof(IMMDevice));
@@ -437,6 +440,8 @@ int PT_DECLSPEC sndDevicesFree(PT_HANDLE *);
 
 /* sndDevicesReInit.cpp */
 int PT_DECLSPEC sndDevicesReInit(PT_HANDLE *, int, int *, int *, int *);
+int PT_DECLSPEC sndCheckDeviceChanges(PT_HANDLE*, BOOL*);
+int PT_DECLSPEC sndDevices_GetAll(PT_HANDLE*, int*);
 
 /* sndDevicesGet.cpp */
 int PT_DECLSPEC sndDevicesGetID(PT_HANDLE *, int, wchar_t *, int *);

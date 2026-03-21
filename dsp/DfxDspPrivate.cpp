@@ -2,6 +2,9 @@
 FxSound
 Copyright (C) 2025  FxSound LLC
 
+Contributors:
+	www.theremino.com (2025)
+	
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -157,6 +160,7 @@ void DfxDspPrivate::processTimer()
 	if (update_from_registry_)
 	{
 		eqUpdateFromRegistry(&i_eq_changed);
+		update_from_registry_ = false;
 	}
 
 	if (i_eq_changed)
@@ -549,7 +553,3 @@ void DfxDspPrivate::getSpectrumBandValues(float* rp_band_values, int i_array_siz
     dfxpSpectrumGetBandValues(dfxp_handle_, rp_band_values, i_array_size);
 }
 
-void DfxDspPrivate::setVolumeNormalization(float target_rms)
-{
-	dfxpEqSetVolumeNormalization(dfxp_handle_, target_rms);
-}

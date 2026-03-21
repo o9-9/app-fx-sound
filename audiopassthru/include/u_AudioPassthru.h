@@ -40,7 +40,7 @@ public:
 	~AudioPassthruPrivate();
 	int init();
 	void mute(bool mute);
-	std::vector<SoundDevice> getSoundDevices();
+	std::vector<SoundDevice> getSoundDevices(bool active_devices = true);
 	int killProcessingThread(int *ip_timed_out);
 	int setBufferLength(int i_buffer_length_msecs);
 	int processTimer();
@@ -50,9 +50,12 @@ public:
 	int setTargetedRealPlaybackDevice(const std::wstring sound_device_guid);
 	void registerCallback(AudioPassthruCallback *callback);
     bool isPlaybackDeviceAvailable();
+	bool checkDeviceChanges();
+	void restoreDefaultPlaybackDevice();
 
 private:
-	int sndDeviceHandleToSoundDevices();
+	int sndDeviceHandleToSoundDevices(bool active_devices = true);
+	static void onDeviceChange();
 
 	PT_HANDLE *hp_sndDevices_;
 	static sndDevicesHdlType s_sndDevices_;
@@ -67,6 +70,6 @@ private:
 	std::vector<SoundDevice> sound_devices_;
 	bool mute_;
 	DfxDsp *p_dfx_dsp_;
-	AudioPassthruCallback *callback_;
+	static AudioPassthruCallback *s_callback_;
 };
 
